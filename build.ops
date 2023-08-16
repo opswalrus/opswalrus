@@ -1,0 +1,20 @@
+params:
+  version: string
+
+imports:
+  core: "opswalrus/core"
+...
+
+version = params.version
+
+template = <<TEMPLATE
+module OpsWalrus
+  VERSION = "{{ version }}"
+end
+TEMPLATE
+
+desc "Write version.rb"
+core.template.write(path: "./lib/opswalrus/version.rb", template: template, variables: {version: version})
+
+sh("Build gem") { 'gem build opswalrus.gemspec' }
+sh("Build docker image") { 'docker build -t opswalrus/ops:{{ version }} .' }

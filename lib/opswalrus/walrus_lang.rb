@@ -1,4 +1,5 @@
 require "citrus"
+require "ostruct"
 require "stringio"
 
 module WalrusLang
@@ -54,9 +55,17 @@ module WalrusLang
 
   Citrus.eval(Grammar)
 
-  def self.render(template, binding)
+  # binding_obj : Binding | Hash
+  def self.render(template, binding_obj)
+    binding_obj = binding_obj.to_binding if binding_obj.is_a?(Hash)
     ast = WalrusLang::Parser.parse(template)
-    ast.render(binding)
+    ast.render(binding_obj)
+  end
+end
+
+class Hash
+  def to_binding
+    OpenStruct.new(self).instance_eval { binding }
   end
 end
 
