@@ -32,6 +32,14 @@ module OpsWalrus
     end
   end
 
+  class BundledDirectoryReference < ImportReference
+    attr_accessor :dirname
+    def initialize(local_name, dirname)
+      super(local_name)
+      @dirname = dirname
+    end
+  end
+
   class OpsFileReference < ImportReference
     attr_accessor :ops_file_path
     def initialize(local_name, ops_file_path)
@@ -145,6 +153,8 @@ module OpsWalrus
       when PackageDependencyReference
         # puts "root namespace: #{@root_namespace.symbol_table}"
         @root_namespace.resolve_symbol(import_reference.package_reference.local_name)   # returns the Namespace associated with the bundled package dirname (i.e. the local name)
+      when BundledDirectoryReference
+        @path_map[import_reference.dirname]
       when DirectoryReference
         @path_map[import_reference.dirname]
       when OpsFileReference
@@ -244,7 +254,7 @@ module OpsWalrus
       case import_reference
 
       # we know we're dealing with a package dependency reference, so we want to do the lookup in the bundle load path, where package dependencies live
-      when PackageDependencyReference
+      when PackageDependencyReference, BundledDirectoryReference
         @bundle_load_path.resolve_import_reference(origin_ops_file, import_reference)
 
       # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to do the lookup in the app load path

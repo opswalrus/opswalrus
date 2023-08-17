@@ -22,7 +22,7 @@ module OpsWalrus
       @bundle_dir
     end
 
-    def ensure_package_bundle_directory_exists
+    def ensure_pwd_bundle_directory_exists
       FileUtils.mkdir_p(@bundle_dir)
     end
 
@@ -50,7 +50,7 @@ module OpsWalrus
     # end
 
     def update
-      ensure_package_bundle_directory_exists
+      ensure_pwd_bundle_directory_exists
 
       package_yaml_files = pwd.glob("./**/package.yaml") - pwd.glob("./**/#{BUNDLE_DIR}/**/package.yaml")
       package_files_within_pwd = package_yaml_files.map {|path| PackageFile.new(path.realpath) }
@@ -83,7 +83,7 @@ module OpsWalrus
 
     # returns the self_pkg directory within the bundle directory
     # def include_directory_in_bundle_as_self_pkg(dirname = pwd)
-    #   ensure_package_bundle_directory_exists
+    #   ensure_pwd_bundle_directory_exists
 
     #   destination_package_path = @bundle_dir.join("self_pkg")
 
@@ -103,7 +103,7 @@ module OpsWalrus
     # This method downloads a package_url that is a dependency referenced in the specified package_file
     # returns the destination directory that the package was downloaded to
     def download_package(package_file, package_reference)
-      ensure_package_bundle_directory_exists
+      ensure_pwd_bundle_directory_exists
 
       local_name = package_reference.local_name
       package_url = package_reference.package_uri
@@ -144,16 +144,21 @@ module OpsWalrus
     end
 
     def download_git_package(package_url, version = nil, destination_package_path = nil)
+      ensure_pwd_bundle_directory_exists
+
       destination_package_path ||= begin
         package_reference_dirname = sanitize_path(package_url)
         bundle_dir.join(package_reference_dirname)
       end
-      FileUtils.remove_dir(destination_package_path) if File.exist?(destination_package_path)
+
+      return destination_package_path if File.exist?(destination_package_path)
+
       if version
-        Git.clone(package_url, destination_package_path, branch: version, config: ['submodule.recurse=true'])
+        ::Git.clone(package_url, destination_package_path, branch: version, config: ['submodule.recurse=true'])
       else
-        Git.clone(package_url, destination_package_path, config: ['submodule.recurse=true'])
+        ::Git.clone(package_url, destination_package_path, config: ['submodule.recurse=true'])
       end
+
       destination_package_path
     end
 

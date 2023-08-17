@@ -57,7 +57,7 @@ module WalrusLang
 
   # binding_obj : Binding | Hash
   def self.render(template, binding_obj)
-    binding_obj = binding_obj.to_binding if binding_obj.is_a?(Hash)
+    binding_obj = binding_obj.to_binding if binding_obj.respond_to?(:to_binding)
     ast = WalrusLang::Parser.parse(template)
     ast.render(binding_obj)
   end

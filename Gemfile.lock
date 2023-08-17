@@ -1,14 +1,14 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.4)
-      bcrypt_pbkdf
-      citrus
-      ed25519
-      git
-      gli
-      rubyzip
-      sshkit
+    opswalrus (1.0.6)
+      bcrypt_pbkdf (~> 1.1)
+      citrus (~> 3.0)
+      ed25519 (~> 1.3)
+      git (~> 1.18)
+      gli (~> 2.21)
+      rubyzip (~> 2.3)
+      sshkit (~> 1.21)
 
 GEM
   remote: https://rubygems.org/

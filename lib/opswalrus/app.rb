@@ -1,5 +1,4 @@
 require "citrus"
-require "git"
 require "io/console"
 require "json"
 require "random/formatter"
@@ -8,6 +7,7 @@ require "socket"
 require "stringio"
 require "yaml"
 require "pathname"
+require_relative "git"
 require_relative "host"
 require_relative "hosts_file"
 require_relative "operation_runner"
@@ -158,24 +158,11 @@ module OpsWalrus
       ops_file = OpsFile.new(self, ops_file_path)
 
       # if the ops file is part of a package, then set the package directory as the app's pwd
-      # puts "run1: #{ops_file.ops_file_path}"
       if ops_file.package_file && ops_file.package_file.dirname.to_s !~ /#{Bundler::BUNDLE_DIR}/
-        # puts "set pwd: #{ops_file.package_file.dirname}"
-        set_pwd(ops_file.package_file.dirname)
-        rebased_ops_file_relative_path = ops_file.ops_file_path.relative_path_from(ops_file.package_file.dirname)
-        # note: rebased_ops_file_relative_path is a relative path that is relative to ops_file.package_file.dirname
-        # puts "rebased path: #{rebased_ops_file_relative_path}"
-        absolute_ops_file_path = ops_file.package_file.dirname.join(rebased_ops_file_relative_path)
-        # puts "absolute path: #{absolute_ops_file_path}"
-        ops_file = OpsFile.new(self, absolute_ops_file_path)
+        ops_file = set_pwd_to_ops_file_package_directory(ops_file)
       end
-      # puts "run2: #{ops_file.ops_file_path}"
 
       op = OperationRunner.new(self, ops_file)
-      # if op.requires_sudo?
-      #   prompt_sudo_password unless sudo_password
-      # end
-      # exit_status, out, err, script_output_structure = op.run(operation_kv_args, params_json_hash: @params, verbose: @verbose)
       result = op.run(operation_kv_args, params_json_hash: @params, verbose: @verbose)
       exit_status = result.exit_status
 
@@ -183,14 +170,7 @@ module OpsWalrus
         puts "Op exit_status"
         puts exit_status
 
-        # puts "Op stdout"
-        # puts out
-
-        # puts "Op stderr"
-        # puts err
-
         puts "Op output"
-        # puts script_output_structure ? JSON.pretty_generate(script_output_structure) : nil.inspect
         puts JSON.pretty_generate(result.value)
       end
 
@@ -201,6 +181,19 @@ module OpsWalrus
       exit_status
     ensure
       FileUtils.remove_entry(tmp_dir) if tmp_dir
+    end
+
+    # sets the App's pwd to the ops file's package directory and
+    # returns a new OpsFile that points at the revised pathname with considered as relative to the package file's directory
+    def set_pwd_to_ops_file_package_directory(ops_file)
+      # puts "set pwd: #{ops_file.package_file.dirname}"
+      set_pwd(ops_file.package_file.dirname)
+      rebased_ops_file_relative_path = ops_file.ops_file_path.relative_path_from(ops_file.package_file.dirname)
+      # note: rebased_ops_file_relative_path is a relative path that is relative to ops_file.package_file.dirname
+      # puts "rebased path: #{rebased_ops_file_relative_path}"
+      absolute_ops_file_path = ops_file.package_file.dirname.join(rebased_ops_file_relative_path)
+      # puts "absolute path: #{absolute_ops_file_path}"
+      OpsFile.new(self, absolute_ops_file_path)
     end
 
     # package_operation_and_args can take one of the following forms:
@@ -244,7 +237,7 @@ module OpsWalrus
 
         # operation_kv_args = package_operation_and_args
         [ops_file_path, operation_kv_args, tmp_dir]
-      when repo_url = git_repo?(package_or_ops_file_reference)
+      when repo_url = Git.repo?(package_or_ops_file_reference)
         destination_package_path = bundler.download_git_package(repo_url)
 
         ops_file_path, operation_kv_args = find_entry_point_ops_file_in_dir(destination_package_path, package_operation_and_args)
@@ -300,22 +293,6 @@ module OpsWalrus
 
       [ops_file_path, operation_kv_args]
     end
-
-    # git_repo?("davidkellis/arborist") -> "https://github.com/davidkellis/arborist"
-    # returns the repo URL
-    def git_repo?(repo_reference)
-      candidate_repo_references = [
-        repo_reference,
-        repo_reference =~ /(\.(com|net|org|dev|io|local))\// && "https://#{repo_reference}",
-        repo_reference !~ /github\.com\// && repo_reference =~ /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/([\w\.@\:\-~]+)$/i && "https://github.com/#{repo_reference}"    # this regex is from https://www.npmjs.com/package/github-username-regex and https://www.debuggex.com/r/H4kRw1G0YPyBFjfm
-      ].compact
-      working_repo_reference = candidate_repo_references.find {|reference| Git.ls_remote(reference) rescue nil }
-      working_repo_reference
-    end
-
-    # def is_dir_git_repo?(dir_path)
-    #   Git.ls_remote(reference) rescue nil
-    # end
 
     def bundle_status
     end

@@ -1,5 +1,6 @@
 require 'pathname'
 require 'yaml'
+require_relative 'git'
 require_relative 'ops_file_script'
 
 module OpsWalrus
@@ -91,12 +92,16 @@ module OpsWalrus
         imports_hash.map do |local_name, yaml_import_reference|
           local_name = local_name.to_s
           import_reference = case yaml_import_reference
+
+          # when the imports line says:
+          # imports:
+          #   my_package: my_package
           in String => import_str
             case
             when package_reference = package_file&.dependency(import_str)     # package dependency reference
               # in this context, import_str is the local package name documented in the package's dependencies
               PackageDependencyReference.new(local_name, package_reference)
-            when import_str.to_pathname.exist?            # path reference
+            when import_str.to_pathname.exist?                                # path reference
               path = import_str.to_pathname
               case
               when path.directory?
@@ -106,13 +111,24 @@ module OpsWalrus
               else
                 raise Error, "Unknown import reference: #{local_name} -> #{import_str.inspect}"
               end
+            when Git.repo?(import_str)                                        # ops file has imported an ad-hoc git repo
+              destination_package_path = app.bundler.download_git_package(import_str)
+              BundledDirectoryReference.new(local_name, destination_package_path)
+            else
+              raise Error, "Unknown import reference: #{local_name}: #{yaml_import_reference.inspect}"
             end
-          # in Hash
+
+          # when the imports line says:
+          # imports:
+          #   my_package:
+          #     url: https://...
+          #     version: 2.1
+          # in Hash => package_defn
           #   url = package_defn["url"]
           #   version = package_defn["version"]
           #   PackageReference.new(local_name, url, version&.to_s)
           else
-            raise Error, "Unknown package reference: #{package_defn.inspect}"
+            raise Error, "Unknown import reference: #{local_name}: #{yaml_import_reference.inspect}"
           end
           [local_name, import_reference]
         end.to_h
@@ -203,37 +219,6 @@ module OpsWalrus
     # => [#<Pathname:/home/david/sync/projects/ops/example/davidinfra/caddy>, #<Pathname:/home/david/sync/projects/ops/example/davidinfra/prepare_host>, #<Pathname:/home/david/sync/projects/ops/example/davidinfra/roles>]
     def sibling_directories
       dirname.glob("*").select(&:directory?)
-    end
-
-
-
-
-
-
-
-
-    def supporting_library_include_dir_and_require_lib
-      if Dir.exist?(ops_file_helper_library_directory)
-        [ops_file_helper_library_directory, ops_file_helper_library_basename]
-      elsif File.exist?(ops_file_sibling_helper_library_file)
-        [dirname, ops_file_helper_library_basename]
-      else
-        [nil, nil]
-      end
-    end
-
-    def ops_file_helper_library_basename
-      basename.sub_ext(".rb")
-    end
-
-    # "/home/david/sync/projects/ops/ops/core/host/info.ops" => "/home/david/sync/projects/ops/ops/core/host/info"
-    def ops_file_helper_library_directory
-      File.join(dirname, basename)
-    end
-
-    # "/home/david/sync/projects/ops/ops/core/host/info.ops" => "/home/david/sync/projects/ops/ops/core/host/info.rb"
-    def ops_file_sibling_helper_library_file
-      "#{ops_file_helper_library_directory}.rb"
     end
 
   end

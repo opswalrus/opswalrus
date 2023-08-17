@@ -72,7 +72,7 @@ module OpsWalrus
         Invocation::Error.new(e)
       end
 
-      if verbose && result.failure?
+      if verbose == 2 && result.failure?
         puts "Ops script error details:"
         puts "Error: #{result.value}"
         puts "Status code: #{result.exit_status}"

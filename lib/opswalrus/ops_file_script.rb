@@ -20,6 +20,9 @@ module OpsWalrus
     def [](index, *args, **kwargs, &block)
       @obj.method(:[]).call(index, *args, **kwargs, &block)
     end
+    def respond_to_missing?(method, *)
+      @obj.is_a?(Hash) && @obj.respond_to?(method)
+    end
     def method_missing(name, *args, **kwargs, &block)
       case @obj
       when Array

@@ -2,7 +2,7 @@ params:
   version: string
 
 imports:
-  core: "opswalrus/core"
+  core: "https://github.com/opswalrus/core.git"
 ...
 
 version = params.version
@@ -13,7 +13,7 @@ module OpsWalrus
 end
 TEMPLATE
 
-desc "Write version.rb"
+puts "Write version.rb for version #{version}"
 core.template.write(path: "./lib/opswalrus/version.rb", template: template, variables: {version: version})
 
 sh("Build gem") { 'gem build opswalrus.gemspec' }
