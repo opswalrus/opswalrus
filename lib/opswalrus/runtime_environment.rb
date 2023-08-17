@@ -32,11 +32,11 @@ module OpsWalrus
     end
   end
 
-  class BundledDirectoryReference < ImportReference
-    attr_accessor :dirname
-    def initialize(local_name, dirname)
+  class DynamicPackageImportReference < ImportReference
+    attr_accessor :package_reference
+    def initialize(local_name, package_reference)
       super(local_name)
-      @dirname = dirname
+      @package_reference = package_reference
     end
   end
 
@@ -94,6 +94,8 @@ module OpsWalrus
       @dir = dir
       @root_namespace = build_symbol_resolution_tree(@dir)
       @path_map = build_path_map(@root_namespace)
+
+      @dynamic_package_additions_memo = {}
     end
 
     # returns a tree of Namespace -> {Namespace* -> {Namespace* -> ..., OpsFile*}, OpsFile*}
@@ -137,6 +139,19 @@ module OpsWalrus
       path_map
     end
 
+    def dynamically_add_new_package_dir(new_package_dir)
+      # patch the symbol resolution (namespace) tree
+      dir_basename = new_package_dir.basename
+      unless @root_namespace.resolve_symbol(dir_basename)
+        new_child_namespace = build_symbol_resolution_tree(new_package_dir)
+        @root_namespace.add(dir_basename, new_child_namespace)
+
+        # patch the path map
+        new_partial_path_map = build_path_map(new_child_namespace)
+        @path_map.merge!(new_partial_path_map)
+      end
+    end
+
     # returns a Namespace
     def lookup_namespace(ops_file)
       @path_map[ops_file.dirname]
@@ -152,9 +167,16 @@ module OpsWalrus
       case import_reference
       when PackageDependencyReference
         # puts "root namespace: #{@root_namespace.symbol_table}"
-        @root_namespace.resolve_symbol(import_reference.package_reference.local_name)   # returns the Namespace associated with the bundled package dirname (i.e. the local name)
-      when BundledDirectoryReference
-        @path_map[import_reference.dirname]
+        @root_namespace.resolve_symbol(import_reference.package_reference.import_resolution_dirname)   # returns the Namespace associated with the bundled package dirname (i.e. the local name)
+      when DynamicPackageImportReference
+        dynamic_package_reference = import_reference.package_reference
+        @dynamic_package_additions_memo[dynamic_package_reference] ||= begin
+          # puts "Downloading dynamic package: #{dynamic_package_reference.inspect}"
+          dynamically_added_package_dir = @runtime_env.app.bundler.download_git_package(dynamic_package_reference.package_uri, dynamic_package_reference.version)
+          dynamically_add_new_package_dir(dynamically_added_package_dir)
+          dynamically_added_package_dir
+        end
+        @root_namespace.resolve_symbol(import_reference.package_reference.import_resolution_dirname)   # returns the Namespace associated with the bundled package dirname (i.e. the sanitized package uri)
       when DirectoryReference
         @path_map[import_reference.dirname]
       when OpsFileReference
@@ -254,7 +276,7 @@ module OpsWalrus
       case import_reference
 
       # we know we're dealing with a package dependency reference, so we want to do the lookup in the bundle load path, where package dependencies live
-      when PackageDependencyReference, BundledDirectoryReference
+      when PackageDependencyReference, DynamicPackageImportReference
         @bundle_load_path.resolve_import_reference(origin_ops_file, import_reference)
 
       # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to do the lookup in the app load path

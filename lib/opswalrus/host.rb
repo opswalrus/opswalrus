@@ -27,6 +27,10 @@ module OpsWalrus
       cmd = block.call if block
       cmd ||= desc_or_cmd
 
+      cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
+
+      #cmd = Shellwords.escape(cmd)
+
       if self.alias
         print "[#{self.alias} | #{host}] "
       else
@@ -35,10 +39,7 @@ module OpsWalrus
       print "#{description}: " if description
       puts cmd
 
-      cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
       return unless cmd && !cmd.strip.empty?
-
-      #cmd = Shellwords.escape(cmd)
 
       # puts "shell: #{cmd}"
       # puts "shell: #{cmd.inspect}"

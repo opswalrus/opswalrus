@@ -112,8 +112,10 @@ module OpsWalrus
                 raise Error, "Unknown import reference: #{local_name} -> #{import_str.inspect}"
               end
             when Git.repo?(import_str)                                        # ops file has imported an ad-hoc git repo
-              destination_package_path = app.bundler.download_git_package(import_str)
-              BundledDirectoryReference.new(local_name, destination_package_path)
+              package_uri = import_str
+              destination_package_path = app.bundler.dynamic_package_path_for_git_package(package_uri)
+              # puts "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
+              DynamicPackageImportReference.new(local_name, DynamicPackageReference.new(local_name, package_uri, nil))
             else
               raise Error, "Unknown import reference: #{local_name}: #{yaml_import_reference.inspect}"
             end

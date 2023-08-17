@@ -5,6 +5,7 @@ require_relative 'bundler'
 
 module OpsWalrus
 
+  # these are static package references defined ahead of time in the package file
   class PackageReference
     attr_accessor :local_name
     attr_accessor :package_uri
@@ -23,7 +24,7 @@ module OpsWalrus
       path.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "ï¿½").strip.tr("\u{202E}%$|:;/\t\r\n\\", "-")
     end
 
-    # important: the dirname implemented as the local_name is critical because Bundler#download_package downloads
+    # important: the import_resolution_dirname implemented as the local_name is critical because Bundler#download_package downloads
     # package dependencies to the name that this method returns, which must match the package reference's local name
     # so that later, when the package is being looked up on the load path (in LoadPath#resolve_import_reference),
     # the package reference's referenced git repo or file path may not exist or be available, and so the package
@@ -32,10 +33,18 @@ module OpsWalrus
     # If this implementation changes, then Bundler#download_package and LoadPath#resolve_import_reference must also
     # change in order for the three things to reconcile with respect to one another, since all three bits of logic are
     # what make bundling package dependencies and loading them function properly.
-    def dirname
+    def import_resolution_dirname
       local_name
     end
 
+  end
+
+  # these are dynamic package references defined at runtime when an OpsFile's imports are being evaluated.
+  # this will usually be the case when an ops file does not belong to a package
+  class DynamicPackageReference < PackageReference
+    def import_resolution_dirname
+      sanitized_package_uri
+    end
   end
 
   class PackageFile

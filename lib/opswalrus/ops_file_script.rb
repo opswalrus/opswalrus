@@ -217,6 +217,9 @@ module OpsWalrus
       end
     end
 
+    # currently, import may only be used to import a package that is referenced in the script's package file
+    # I may decide to extend this to work with dynamic package references
+    #
     # local_package_name is the local package name defined for the package dependency that is attempting to be referenced
     def import(local_package_name)
       local_package_name = local_package_name.to_s
@@ -257,16 +260,17 @@ module OpsWalrus
       cmd = block.call if block
       cmd ||= desc_or_cmd
 
+      cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
+
+      #cmd = Shellwords.escape(cmd)
+
       # puts "shell! self: #{self.inspect}"
 
       print "[#{@runtime_env.local_hostname}] "
       print "#{description}: " if description
       puts cmd
 
-      cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
       return unless cmd && !cmd.strip.empty?
-
-      #cmd = Shellwords.escape(cmd)
 
       sudo_password = @runtime_env.sudo_password
       sudo_password &&= sudo_password.gsub(/\n+$/,'')     # remove trailing newlines from sudo_password

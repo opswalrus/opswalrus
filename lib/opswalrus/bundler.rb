@@ -23,7 +23,7 @@ module OpsWalrus
     end
 
     def ensure_pwd_bundle_directory_exists
-      FileUtils.mkdir_p(@bundle_dir)
+      FileUtils.mkdir_p(@bundle_dir) unless @bundle_dir.exist?
     end
 
     # # returns the OpsFile within the bundle directory that represents the given ops_file (which is outside of the bundle directory)
@@ -146,12 +146,9 @@ module OpsWalrus
     def download_git_package(package_url, version = nil, destination_package_path = nil)
       ensure_pwd_bundle_directory_exists
 
-      destination_package_path ||= begin
-        package_reference_dirname = sanitize_path(package_url)
-        bundle_dir.join(package_reference_dirname)
-      end
+      destination_package_path ||= dynamic_package_path_for_git_package(package_url, version)
 
-      return destination_package_path if File.exist?(destination_package_path)
+      return destination_package_path if destination_package_path.exist?
 
       if version
         ::Git.clone(package_url, destination_package_path, branch: version, config: ['submodule.recurse=true'])
@@ -160,6 +157,11 @@ module OpsWalrus
       end
 
       destination_package_path
+    end
+
+    def dynamic_package_path_for_git_package(package_url, version = nil)
+      package_reference_dirname = sanitize_path(package_url)
+      bundle_dir.join(package_reference_dirname)
     end
 
     def sanitize_path(path)
