@@ -16,12 +16,16 @@ module SSHKit
         cmd.started = Time.now
         PTY.spawn(cmd.to_command) do |stdout, stdin, pid|
           stdout_thread = Thread.new do
+            # debug_log = StringIO.new
             buffer = ""
             partial_buffer = ""
             while !stdout.closed?
+              # debug_log.puts "!!!\nbuffer=#{buffer}|EOL|\npartial=#{partial_buffer}|EOL|"
               # puts "9" * 80
               begin
-                stdout.read_nonblock(4096, partial_buffer)
+                # partial_buffer = ""
+                # stdout.read_nonblock(4096, partial_buffer)
+                partial_buffer = stdout.read_nonblock(4096)
                 buffer << partial_buffer
                 # puts "nonblocking1. buffer=#{buffer} partial_buffer=#{partial_buffer}"
                 buffer = handle_data_for_stdout(output, cmd, buffer, stdin, false)
@@ -48,6 +52,10 @@ module SSHKit
               end
             end
             # puts "end!"
+            # debug_log.puts "!!!\nbuffer=#{buffer}|EOL|\npartial=#{partial_buffer}|EOL|"
+
+            # puts "*" * 80
+            # puts debug_log.string
 
           end
           stdout_thread.join
@@ -59,12 +67,14 @@ module SSHKit
 
       # returns [complete lines, new buffer]
       def split_buffer(buffer)
-        lines = buffer.split(/(\r\n)\r|\n/)
+        lines = buffer.split(/(\r\n)|\r|\n/)
         buffer = lines.pop
         [lines, buffer]
       end
 
       def handle_data_for_stdout(output, cmd, buffer, stdin, is_blocked)
+        # puts "handling data for stdout: #{buffer}"
+
         # we're blocked on reading, so let's process the buffer
         lines, buffer = split_buffer(buffer)
         lines.each do |line|

@@ -7,18 +7,18 @@ module OpsWalrus
 
   module HostDSL
     # returns the stdout from the command
-    def sh(desc_or_cmd = nil, cmd = nil, stdin: nil, &block)
-      out, err, status = *shell!(desc_or_cmd, cmd, block, stdin: stdin)
+    def sh(desc_or_cmd = nil, cmd = nil, input: nil, &block)
+      out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
       out
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell(desc_or_cmd = nil, cmd = nil, stdin: nil, &block)
-      shell!(desc_or_cmd, cmd, block, stdin: stdin)
+    def shell(desc_or_cmd = nil, cmd = nil, input: nil, &block)
+      shell!(desc_or_cmd, cmd, block, input: input)
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, stdin: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
@@ -45,7 +45,7 @@ module OpsWalrus
       # puts "shell: #{cmd.inspect}"
       # puts "sudo_password: #{sudo_password}"
 
-      sshkit_cmd = execute_cmd(cmd)
+      sshkit_cmd = execute_cmd(cmd, input: input)
 
       [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
     end
@@ -203,6 +203,10 @@ module OpsWalrus
       })
     end
 
+    def set_runtime_env(runtime_env)
+      @runtime_env = runtime_env
+    end
+
     def set_ssh_session_connection(sshkit_backend)
       @sshkit_backend = sshkit_backend
     end
@@ -212,18 +216,27 @@ module OpsWalrus
     end
 
     def clear_ssh_session
+      @runtime_env = nil
       @sshkit_backend = nil
       @tmp_bundle_root_dir = nil
     end
 
-    def execute(*args)
+    def execute(*args, input: nil)
       # puts "interaction handler responds with: #{ssh_password}"
-      @sshkit_backend.capture(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
+      # @sshkit_backend.capture(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
       # @sshkit_backend.capture(*args, interaction_handler: SudoPromptInteractionHandler.new, verbosity: :info)
+
+      @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
+        @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: :info)
+      end
+
     end
 
-    def execute_cmd(*args)
-      @sshkit_backend.execute_cmd(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
+    def execute_cmd(*args, input: nil)
+      # @sshkit_backend.execute_cmd(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
+      @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
+        @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler, verbosity: :info)
+      end
     end
 
     def upload(local_path_or_io, remote_path)

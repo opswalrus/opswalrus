@@ -7,6 +7,7 @@ require "socket"
 require "stringio"
 require "yaml"
 require "pathname"
+require_relative "patches"
 require_relative "git"
 require_relative "host"
 require_relative "hosts_file"
@@ -14,21 +15,6 @@ require_relative "operation_runner"
 require_relative "bundler"
 require_relative "package_file"
 
-class String
-  def escape_single_quotes
-    gsub("'"){"\\'"}
-  end
-
-  def to_pathname
-    Pathname.new(self)
-  end
-end
-
-class Pathname
-  def to_pathname
-    self
-  end
-end
 
 module OpsWalrus
   class Error < StandardError
@@ -131,6 +117,7 @@ module OpsWalrus
     def prompt_sudo_password
       password = IO::console.getpass(LOCAL_SUDO_PASSWORD_PROMPT)
       set_sudo_password(password)
+      # puts "sudo password = |#{password}|"
       nil
     end
 

@@ -3,6 +3,7 @@ require 'shellwords'
 require 'socket'
 require 'sshkit'
 
+require_relative 'interaction_handlers'
 require_relative 'traversable'
 require_relative 'walrus_lang'
 
@@ -196,8 +197,26 @@ module OpsWalrus
       @bundle_load_path = LoadPath.new(self, @app.bundle_dir)
       @app_load_path = LoadPath.new(self, @app.pwd)
 
+      @interaction_handler = ScopedMappingInteractionHandler.new({
+        /\[sudo\] password for .*?:\s*/ => "#{sudo_password}\n",
+      })
+
       configure_sshkit
     end
+
+    # def with_sudo_password(password, &block)
+    #   @interaction_handler.with_sudo_password(password, &block)
+    # end
+
+    # input_mapping : Hash[ String | Regex => String ]
+    # sudo_password : String
+    def handle_input(input_mapping, sudo_password = nil, &block)
+      @interaction_handler.with_mapping(input_mapping, sudo_password, &block)
+    end
+
+    # def handle_input_with_sudo_password(input_mapping, password, &block)
+    #   @interaction_handler.with_mapping(input_mapping, password, &block)
+    # end
 
     # configure sshkit globally
     def configure_sshkit

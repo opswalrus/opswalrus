@@ -3,9 +3,25 @@ params:
 
 imports:
   core: "https://github.com/opswalrus/core.git"
+
 ...
 
+# when you run this script, it should do something like:
+# ~/sync/projects/ops/opswalrus on  main via 💎 v3.2.2
+# ❯ ../ops.sh run build.ops version:1.0.7
+# Write version.rb for version 1.0.7
+# [localhost] Build gem: gem build opswalrus.gemspec
+# [localhost] Check whether Bitwarden is locked or not: bw status
+# [localhost] Get Rubygems OTP: bw get totp Rubygems
+# [localhost] Push gem: gem push opswalrus-1.0.7.gem
+# [localhost] Build docker image: docker build -t opswalrus/ops:1.0.7 .
+
+# ~/sync/projects/ops/opswalrus on  main via 💎 v3.2.2 took 44s
+
+
 version = params.version
+
+exit 1, "version parameter must be specified" unless version
 
 template = <<TEMPLATE
 module OpsWalrus
@@ -17,4 +33,22 @@ puts "Write version.rb for version #{version}"
 core.template.write(path: "./lib/opswalrus/version.rb", template: template, variables: {version: version})
 
 sh("Build gem") { 'gem build opswalrus.gemspec' }
+bw_status_output = sh("Check whether Bitwarden is locked or not") { 'bw status' }
+# the status command currently exhibits an error in which it emits 'mac failed.' some number of times, so we need to filter that out
+# see:
+# - https://community.bitwarden.com/t/what-does-mac-failed-mean-exactly/29208
+# - https://github.com/bitwarden/cli/issues/88
+# - https://github.com/vwxyzjn/portwarden/issues/22
+# ❯ bw status
+# mac failed.
+# {"serverUrl":"...","lastSync":"2023-08-17T19:14:09.384Z","userEmail":"...","userId":"...","status":"locked"}
+bw_status_output = bw_status_output.gsub('mac failed.', '').strip
+bw_status_json = bw_status_output.parse_json
+
+if bw_status_json['status'] != 'unlocked'
+  exit 0, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
+end
+
+totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
+sh("Push gem", input: {"You have enabled multi-factor authentication. Please enter OTP code." => "#{totp}\n"}) { 'gem push opswalrus-{{ version }}.gem' }
 sh("Build docker image") { 'docker build -t opswalrus/ops:{{ version }} .' }

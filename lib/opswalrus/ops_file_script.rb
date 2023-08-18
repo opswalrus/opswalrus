@@ -121,13 +121,15 @@ module OpsWalrus
       # bootstrap_shell_script = BootstrapLinuxHostShellScript
       # on sshkit_hosts do |sshkit_host|
       SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
-        host = sshkit_host_to_ops_host_map[sshkit_host]
 
+        # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
+
+        host = sshkit_host_to_ops_host_map[sshkit_host]
         # puts "#{host.alias} / #{host}:"
 
         begin
-          # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
-          host.set_ssh_session_connection(self)
+          host.set_runtime_env(runtime_env)
+          host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
 
           # copy over bootstrap shell script
           # io = StringIO.new(bootstrap_shell_script)
@@ -199,11 +201,14 @@ module OpsWalrus
       @runtime_env.app.inventory(tags)
     end
 
-    def exit(exit_status)
+    def exit(exit_status, message = nil)
+      if message
+        puts message
+      end
       result = if exit_status == 0
-        Success.new(nil)
+        Invocation::Success.new(nil)
       else
-        Error.new(nil, exit_status)
+        Invocation::Error.new(nil, exit_status)
       end
       throw :exit_now, result
     end
@@ -240,18 +245,18 @@ module OpsWalrus
     end
 
     # returns the stdout from the command
-    def sh(desc_or_cmd = nil, cmd = nil, stdin: nil, &block)
-      out, err, status = *shell!(desc_or_cmd, cmd, block, stdin: stdin)
+    def sh(desc_or_cmd = nil, cmd = nil, input: nil, &block)
+      out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
       out
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell(desc_or_cmd = nil, cmd = nil, stdin: nil, &block)
-      shell!(desc_or_cmd, cmd, block, stdin: stdin)
+    def shell(desc_or_cmd = nil, cmd = nil, input: nil, &block)
+      shell!(desc_or_cmd, cmd, block, input: input)
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, stdin: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
@@ -272,8 +277,8 @@ module OpsWalrus
 
       return unless cmd && !cmd.strip.empty?
 
-      sudo_password = @runtime_env.sudo_password
-      sudo_password &&= sudo_password.gsub(/\n+$/,'')     # remove trailing newlines from sudo_password
+      # sudo_password = @runtime_env.sudo_password
+      # sudo_password &&= sudo_password.gsub(/\n+$/,'')     # remove trailing newlines from sudo_password
 
       # puts "shell: #{cmd}"
       # puts "shell: #{cmd.inspect}"
@@ -281,9 +286,13 @@ module OpsWalrus
 
       # sshkit_cmd = SSHKit::Backend::LocalNonBlocking.new {
       # sshkit_cmd = SSHKit::Backend::LocalPty.new {
-      sshkit_cmd = backend.execute_cmd(cmd, interaction_handler: SudoPasswordMapper.new(sudo_password).interaction_handler, verbosity: :info)
+      # sshkit_cmd = backend.execute_cmd(cmd, interaction_handler: SudoPasswordMapper.new(sudo_password).interaction_handler, verbosity: :info)
         # execute_cmd(cmd, interaction_handler: SudoPromptInteractionHandler.new, verbosity: :info)
       # }.run
+
+      sshkit_cmd = @runtime_env.handle_input(input) do |interaction_handler|
+        backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: :info)
+      end
 
       [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
     end
