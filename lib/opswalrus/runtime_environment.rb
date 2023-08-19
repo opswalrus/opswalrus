@@ -82,7 +82,7 @@ module OpsWalrus
     end
   end
 
-    # the assumption is that we have a bundle directory with all the packages in it
+  # the assumption is that we have a bundle directory with all the packages in it
   # and the bundle directory is the root directory
   class LoadPath
     include Traversable

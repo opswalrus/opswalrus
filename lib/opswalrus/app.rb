@@ -154,6 +154,10 @@ module OpsWalrus
         ops_file = set_pwd_to_ops_file_package_directory(ops_file)
       end
 
+      if @verbose
+        puts "Running: #{ops_file.ops_file_path}"
+      end
+
       op = OperationRunner.new(self, ops_file)
       result = op.run(operation_kv_args, params_json_hash: @params, verbose: @verbose)
       exit_status = result.exit_status

@@ -16,9 +16,9 @@ module OpsWalrus
     # this is invoked on an unhandled exception or a call to exit_now!
     on_error do |exception|
       # puts "*" * 80
-      # puts "catchall exception handler:"
-      # puts exception.message
-      # puts exception.backtrace.join("\n")
+      puts "catchall exception handler:"
+      puts exception.message
+      puts exception.backtrace.join("\n")
       false   # disable built-in exception handling
     end
 

@@ -5,6 +5,113 @@ require_relative "interaction_handlers"
 
 module OpsWalrus
 
+  class HostProxyOpsFileInvocationBuilder
+    def initialize(host_proxy, is_invocation_a_call_to_package_in_bundle_dir = false)
+      @host_proxy = host_proxy
+      @is_invocation_a_call_to_package_in_bundle_dir = is_invocation_a_call_to_package_in_bundle_dir
+      @method_chain = []
+    end
+
+    def method_missing(method_name, *args, **kwargs)
+      @method_chain << method_name.to_s
+
+      if args.empty? && kwargs.empty?   # when there are no args and no kwargs, we are just drilling down through another namespace
+        self
+      else
+        # when there are args or kwargs, then the method invocation represents an attempt to run an OpsFile on a remote host,
+        # so we want to build up a command and send it to the remote host via HostDSL#run_ops
+        @method_chain.unshift(Bundler::BUNDLE_DIR) if @is_invocation_a_call_to_package_in_bundle_dir
+
+        remote_run_command_args = "--json"
+
+        remote_run_command_args << " "
+        remote_run_command_args << @method_chain.join(" ")
+
+        unless args.empty?
+          remote_run_command_args << " "
+          remote_run_command_args << args.join(" ")
+        end
+
+        unless kwargs.empty?
+          remote_run_command_args << " "
+          remote_run_command_args << kwargs.map do |k, v|
+            case v
+            when Array
+              v.map {|v_element| "#{k}:#{v_element}" }
+            else
+              "#{k}:#{v}"
+            end
+          end.join(" ")
+        end
+
+        @host_proxy.run_ops(:run, remote_run_command_args)
+      end
+    end
+  end
+
+  # the subclasses of HostProxy will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
+  class HostProxy
+    def self.define_host_proxy_class(ops_file)
+      klass = Class.new(HostProxy)
+
+      methods_defined = Set.new
+
+      # define methods for every import in the script
+      ops_file.local_symbol_table.each do |symbol_name, import_reference|
+        unless methods_defined.include? symbol_name
+          # puts "1. defining: #{symbol_name}(...)"
+          klass.define_method(symbol_name) do |*args, **kwargs, &block|
+            invocation_builder = case import_reference
+            # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
+            # therefore, we want to reference the specified ops file with respect to the bundle dir
+            when PackageDependencyReference
+              HostProxyOpsFileInvocationBuilder.new(self, true)
+
+            # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
+            # the specified ops file with respect to the root directory, and not with respect to the bundle dir
+            when DirectoryReference, OpsFileReference
+              HostProxyOpsFileInvocationBuilder.new(self, false)
+            end
+
+            invocation_builder.send(symbol_name, *args, **kwargs, &block)
+          end
+          methods_defined << symbol_name
+        end
+      end
+
+      # define methods for every Namespace or OpsFile within the namespace that the OpsFile resides within
+      sibling_symbol_table = Set.new
+      sibling_symbol_table |= ops_file.dirname.glob("*.ops").map {|ops_file_path| ops_file_path.basename(".ops").to_s }   # OpsFiles
+      sibling_symbol_table |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
+      sibling_symbol_table.each do |symbol_name|
+        unless methods_defined.include? symbol_name
+          # puts "2. defining: #{symbol_name}(...)"
+          klass.define_method(symbol_name) do |*args, **kwargs, &block|
+            invocation_builder = HostProxyOpsFileInvocationBuilder.new(self, false)
+            invocation_builder.invoke(symbol_name, *args, **kwargs, &block)
+          end
+          methods_defined << symbol_name
+        end
+      end
+
+      klass
+    end
+
+
+    attr_accessor :_host
+
+    def initialize(host)
+      @_host = host
+    end
+
+    # the subclasses of this class will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
+
+    def method_missing(name, ...)
+      @_host.send(name, ...)
+    end
+  end
+
+
   module HostDSL
     # returns the stdout from the command
     def sh(desc_or_cmd = nil, cmd = nil, input: nil, &block)
@@ -70,65 +177,6 @@ module OpsWalrus
       shell!(cmd)
     end
 
-  end
-
-  class HostProxyOpsFileInvocationBuilder
-    def initialize(host_proxy, is_invocation_a_call_to_package_in_bundle_dir = false)
-      @host_proxy = host_proxy
-      @is_invocation_a_call_to_package_in_bundle_dir = is_invocation_a_call_to_package_in_bundle_dir
-      @method_chain = []
-    end
-
-    def method_missing(method_name, *args, **kwargs)
-      @method_chain << method_name.to_s
-
-      if args.empty? && kwargs.empty?   # when there are no args and no kwargs, we are just drilling down through another namespace
-        self
-      else
-        # when there are args or kwargs, then the method invocation represents an attempt to run an OpsFile on a remote host,
-        # so we want to build up a command and send it to the remote host via HostDSL#run_ops
-        @method_chain.unshift(Bundler::BUNDLE_DIR) if @is_invocation_a_call_to_package_in_bundle_dir
-
-        remote_run_command_args = "--json"
-
-        remote_run_command_args << " "
-        remote_run_command_args << @method_chain.join(" ")
-
-        unless args.empty?
-          remote_run_command_args << " "
-          remote_run_command_args << args.join(" ")
-        end
-
-        unless kwargs.empty?
-          remote_run_command_args << " "
-          remote_run_command_args << kwargs.map do |k, v|
-            case v
-            when Array
-              v.map {|v_element| "#{k}:#{v_element}" }
-            else
-              "#{k}:#{v}"
-            end
-          end.join(" ")
-        end
-
-        @host_proxy.run_ops(:run, remote_run_command_args)
-      end
-    end
-  end
-
-  # the subclasses of HostProxy will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
-  class HostProxy
-    attr_accessor :_host
-
-    def initialize(host)
-      @_host = host
-    end
-
-    # the subclasses of this class will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
-
-    def method_missing(name, ...)
-      @_host.send(name, ...)
-    end
   end
 
   class Host
@@ -224,18 +272,12 @@ module OpsWalrus
     end
 
     def execute(*args, input: nil)
-      # puts "interaction handler responds with: #{ssh_password}"
-      # @sshkit_backend.capture(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
-      # @sshkit_backend.capture(*args, interaction_handler: SudoPromptInteractionHandler.new, verbosity: :info)
-
       @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
         @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: :info)
       end
-
     end
 
     def execute_cmd(*args, input: nil)
-      # @sshkit_backend.execute_cmd(*args, interaction_handler: SudoPasswordMapper.new(ssh_password).interaction_handler, verbosity: :info)
       @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
         @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler, verbosity: :info)
       end
