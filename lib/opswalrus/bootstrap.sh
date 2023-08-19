@@ -15,6 +15,7 @@ if [ -x "$(command -v /home/linuxbrew/.linuxbrew/bin/brew)" ]; then
   fi
 fi
 
+# https://github.com/chef/os_release documents the contents of /etc/os-release from a bunch of distros
 OS=$(cat /etc/os-release | grep "^ID=")
 if echo $OS | grep -q 'ubuntu'; then
   # update package list

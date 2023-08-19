@@ -206,7 +206,7 @@ davidinfra
 │   ├── install
 │   │   └── debian.ops
 │   └── install.ops
-├── hosts.yml
+├── hosts.yaml
 ├── main.ops
 ├── prepare_host
 │   ├── all.ops
@@ -227,7 +227,7 @@ davidinfra
 │       │   ├── install
 │       │   │   └── debian.ops
 │       │   └── install.ops
-│       ├── hosts.yml
+│       ├── hosts.yaml
 │       ├── main.ops
 │       ├── prepare_host
 │       │   ├── all.ops
@@ -239,7 +239,7 @@ davidinfra
 │   ├── install
 │   │   └── debian.ops
 │   └── install.ops
-├── hosts.yml
+├── hosts.yaml
 ├── main.ops
 ├── prepare_host
 │   ├── all.ops

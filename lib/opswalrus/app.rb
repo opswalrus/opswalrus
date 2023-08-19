@@ -40,6 +40,7 @@ module OpsWalrus
       @pwd = pwd.to_pathname
       @bundler = Bundler.new(@pwd)
       @local_hostname = "localhost"
+      @mode = :report     # :report | :script
     end
 
     def to_s
@@ -50,12 +51,16 @@ module OpsWalrus
       ""  # return empty string because we won't want anyone accidentally printing or inspecting @sudo_password
     end
 
-    def emit_json_output!
-      @emit_json_output = true
+    def script_mode!
+      @mode = :script
     end
 
-    def emit_json_output?
-      @emit_json_output
+    def report_mode?
+      @mode == :report
+    end
+
+    def script_mode?
+      @mode == :script
     end
 
     def set_local_hostname(hostname)
@@ -161,7 +166,7 @@ module OpsWalrus
         puts JSON.pretty_generate(result.value)
       end
 
-      if emit_json_output?
+      if script_mode?
         puts JSON.pretty_generate(result.value)
       end
 
@@ -302,7 +307,7 @@ module OpsWalrus
       tags = @inventory_tag_selections + (tag_selection || [])
       tags.uniq!
 
-      host_references = ["hosts.yml"] if (host_references.nil? || host_references.empty?) && File.exist?("hosts.yml")
+      host_references = ["hosts.yaml"] if (host_references.nil? || host_references.empty?) && File.exist?("hosts.yaml")
 
       hosts_files, host_strings = host_references.partition {|ref| File.exist?(ref) }
       hosts_files = hosts_files.map {|file_path| HostsFile.new(file_path) }

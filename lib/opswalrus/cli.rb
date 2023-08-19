@@ -53,7 +53,7 @@ module OpsWalrus
       c.flag [:u, :user], desc: "Specify the user that the operation will run as"
       c.switch :pass, desc: "Prompt for a sudo password"
       c.flag [:p, :params], desc: "JSON string that represents the input parameters for the operation. The JSON string must conform to the params schema for the operation."
-      c.switch :json, desc: "Emit JSON output"
+      c.switch :script, desc: "Script mode"
 
       c.action do |global_options, options, args|
         hosts = global_options[:hosts] || []
@@ -81,16 +81,9 @@ module OpsWalrus
           $app.prompt_sudo_password
         end
 
-        if options[:json]
-          $app.emit_json_output!
+        if options[:script]
+          $app.script_mode!
         end
-
-        # puts "verbose"
-        # puts verbose.inspect
-        # puts "user"
-        # puts user.inspect
-        # puts "args"
-        # puts args.inspect
 
         exit_status = $app.run(args)
 

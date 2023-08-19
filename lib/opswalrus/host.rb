@@ -31,13 +31,15 @@ module OpsWalrus
 
       #cmd = Shellwords.escape(cmd)
 
-      if self.alias
-        print "[#{self.alias} | #{host}] "
-      else
-        print "[#{host}] "
+      if App.instance.report_mode?
+        if self.alias
+          print "[#{self.alias} | #{host}] "
+        else
+          print "[#{host}] "
+        end
+        print "#{description}: " if description
+        puts cmd
       end
-      print "#{description}: " if description
-      puts cmd
 
       return unless cmd && !cmd.strip.empty?
 

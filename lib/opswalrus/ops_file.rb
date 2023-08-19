@@ -49,7 +49,7 @@ module OpsWalrus
       file_halves = script_string.split(/^\.\.\.$/, 2)
       case file_halves.count
       when 1
-        yaml, ruby_script = "", file_halves
+        yaml, ruby_script = "", file_halves.first
       when 2
         yaml, ruby_script = *file_halves
       else
@@ -59,7 +59,7 @@ module OpsWalrus
     end
 
     def params
-      yaml["params"]
+      yaml["params"] || {}
     end
 
     def output
@@ -97,28 +97,7 @@ module OpsWalrus
           # imports:
           #   my_package: my_package
           in String => import_str
-            case
-            when package_reference = package_file&.dependency(import_str)     # package dependency reference
-              # in this context, import_str is the local package name documented in the package's dependencies
-              PackageDependencyReference.new(local_name, package_reference)
-            when import_str.to_pathname.exist?                                # path reference
-              path = import_str.to_pathname
-              case
-              when path.directory?
-                DirectoryReference.new(local_name, path.realpath)
-              when path.file? && path.extname.downcase == ".ops"
-                OpsFileReference.new(local_name, path.realpath)
-              else
-                raise Error, "Unknown import reference: #{local_name} -> #{import_str.inspect}"
-              end
-            when Git.repo?(import_str)                                        # ops file has imported an ad-hoc git repo
-              package_uri = import_str
-              destination_package_path = app.bundler.dynamic_package_path_for_git_package(package_uri)
-              # puts "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
-              DynamicPackageImportReference.new(local_name, DynamicPackageReference.new(local_name, package_uri, nil))
-            else
-              raise Error, "Unknown import reference: #{local_name}: #{yaml_import_reference.inspect}"
-            end
+            import_string_to_import_reference(local_name, import_str)
 
           # when the imports line says:
           # imports:
@@ -135,6 +114,49 @@ module OpsWalrus
           [local_name, import_reference]
         end.to_h
       end
+    end
+
+    def import_string_to_import_reference(local_name, import_str)
+      if package_reference = package_file&.dependency(import_str)                       # package dependency reference
+        # in this context, import_str is the local package name documented in the package's dependencies
+        return PackageDependencyReference.new(local_name, package_reference)
+      end
+
+      import_path = import_str.to_pathname
+      if import_path.absolute? && import_path.exist?                                    # absolute path reference
+        return case
+        when import_path.directory?
+          DirectoryReference.new(local_name, import_path.realpath)
+        when import_path.file? && import_path.extname.downcase == ".ops"
+          OpsFileReference.new(local_name, import_path.realpath)
+        else
+          raise Error, "Unknown import reference for absolute path: #{local_name}: #{import_path}"
+        end
+      end
+      if import_path.relative?                                                          # relative path reference
+        rebased_path = dirname.join(import_path)
+        if rebased_path.exist?
+          return case
+          when rebased_path.directory?
+            DirectoryReference.new(local_name, rebased_path.realpath)
+          when rebased_path.file? && rebased_path.extname.downcase == ".ops"
+            OpsFileReference.new(local_name, rebased_path.realpath)
+          else
+            raise Error, "Unknown import reference for relative path: #{local_name}: #{import_path}"
+          end
+        elsif rebased_path.sub_ext(".ops").exist?
+          return OpsFileReference.new(local_name, rebased_path.sub_ext(".ops").realpath)
+        end
+      end
+
+      package_uri = import_str
+      if Git.repo?(package_uri)                                                         # ops file has imported an ad-hoc git repo
+        destination_package_path = app.bundler.dynamic_package_path_for_git_package(package_uri)
+        # puts "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
+        DynamicPackageImportReference.new(local_name, DynamicPackageReference.new(local_name, package_uri, nil))
+      end
+
+      raise Error, "Unknown import reference: #{local_name}: #{import_str.inspect}"
     end
 
     def invoke(runtime_env, params_hash)

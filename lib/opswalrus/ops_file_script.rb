@@ -153,7 +153,7 @@ module OpsWalrus
           # we run the block in the context of the host, s.t. `self` within the block evaluates to `host`
           retval = host.instance_exec(local_host, &block)    # host is passed as the argument to the block
 
-          puts retval.inspect
+          # puts retval.inspect
 
           # cleanup
           if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
@@ -271,9 +271,11 @@ module OpsWalrus
 
       # puts "shell! self: #{self.inspect}"
 
-      print "[#{@runtime_env.local_hostname}] "
-      print "#{description}: " if description
-      puts cmd
+      if App.instance.report_mode?
+        print "[#{@runtime_env.local_hostname}] "
+        print "#{description}: " if description
+        puts cmd
+      end
 
       return unless cmd && !cmd.strip.empty?
 
@@ -492,9 +494,7 @@ module OpsWalrus
     end
 
     def evaluate
-      # catch(:exit_now) do
-        eval(@ops_file_script.script, nil, @ops_file_script.ops_file.ops_file_path.to_s, @ops_file_script.ops_file.script_line_offset)
-      # end
+      eval(@ops_file_script.script, nil, @ops_file_script.ops_file.ops_file_path.to_s, @ops_file_script.ops_file.script_line_offset)
     end
 
     # def evaluate
