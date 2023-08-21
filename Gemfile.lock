@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.8)
+    opswalrus (1.0.9)
       bcrypt_pbkdf (~> 1.1)
       citrus (~> 3.0)
       ed25519 (~> 1.3)
