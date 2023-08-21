@@ -109,38 +109,74 @@ module OpsWalrus
       package_url = package_reference.package_uri
       version = package_reference.version
 
-      destination_package_path = @bundle_dir.join(package_reference.dirname)
+      destination_package_path = @bundle_dir.join(package_reference.import_resolution_dirname)
       FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
 
-      case
-      when package_url =~ /\.git/                               # git reference
-        download_git_package(package_url, version, destination_package_path)
-      when package_url.start_with?("file://")                   # local path
-        path = package_url.sub("file://", "")
-        path = path.to_pathname
-        package_path_to_download = if path.relative?            # relative path
-          package_file.containing_directory.join(path)
-        else                                                    # absolute path
-          path.realpath
-        end
+      download_package_contents(package_file, local_name, package_url, version, destination_package_path)
+      # case
+      # when package_url =~ /\.git/                               # git reference
+      #   download_git_package(package_url, version, destination_package_path)
+      # when package_url.start_with?("file://")                   # local path
+      #   path = package_url.sub("file://", "")
+      #   path = path.to_pathname
+      #   package_path_to_download = if path.relative?            # relative path
+      #     package_file.containing_directory.join(path)
+      #   else                                                    # absolute path
+      #     path.realpath
+      #   end
 
-        raise Error, "Package not found: #{package_path_to_download}" unless package_path_to_download.exist?
-        FileUtils.cp_r(package_path_to_download, destination_package_path)
-      when package_url.to_pathname.exist? || package_file.containing_directory.join(package_url).exist?     # local path
-        path = package_url.to_pathname
-        package_path_to_download = if path.relative?            # relative path
-          package_file.containing_directory.join(path)
-        else                                                    # absolute path
-          path.realpath
-        end
+      #   raise Error, "Package not found: #{package_path_to_download}" unless package_path_to_download.exist?
+      #   FileUtils.cp_r(package_path_to_download, destination_package_path)
+      # when package_url.to_pathname.exist? || package_file.containing_directory.join(package_url).exist?     # local path
+      #   path = package_url.to_pathname
+      #   package_path_to_download = if path.relative?            # relative path
+      #     package_file.containing_directory.join(path)
+      #   else                                                    # absolute path
+      #     path.realpath
+      #   end
 
-        raise Error, "Package not found: #{package_path_to_download}" unless File.exist?(package_path_to_download)
-        FileUtils.cp_r(package_path_to_download, destination_package_path)
-      else                                                      # git reference
-        download_git_package(package_url, version, destination_package_path)
-      end
+      #   raise Error, "Package not found: #{package_path_to_download}" unless File.exist?(package_path_to_download)
+      #   FileUtils.cp_r(package_path_to_download, destination_package_path)
+      # else                                                      # git reference
+      #   download_git_package(package_url, version, destination_package_path)
+      # end
 
       destination_package_path
+    end
+
+    def download_package_contents(package_file, local_name, package_url, version, destination_package_path)
+      package_path = package_url.to_pathname
+      package_path = package_path.to_s.gsub(/^~/, Dir.home).to_pathname
+      if package_path.absolute? && package_path.exist?                                   # absolute path reference
+        return case
+        when package_path.directory?
+          package_path_to_download = package_path.realpath
+          FileUtils.cp_r(package_path_to_download, destination_package_path)
+        when package_path.file?
+          raise Error, "Package reference must be a directory, not a file:: #{local_name}: #{package_path}"
+        else
+          raise Error, "Unknown package reference for absolute path: #{local_name}: #{package_path}"
+        end
+      end
+      if package_path.relative?                                                          # relative path reference
+        rebased_path = package_file.containing_directory.join(package_path)
+        if rebased_path.exist?
+          return case
+          when rebased_path.directory?
+            package_path_to_download = rebased_path.realpath
+            FileUtils.cp_r(package_path_to_download, destination_package_path)
+          when rebased_path.file?
+            raise Error, "Package reference must be a directory, not a file:: #{local_name}: #{package_path}"
+          else
+            raise Error, "Unknown package reference for relative path: #{local_name}: #{package_path}"
+          end
+        end
+      end
+
+      package_uri = package_url
+      if Git.repo?(package_uri)                                                          # git repo
+        download_git_package(package_url, version, destination_package_path)
+      end
     end
 
     def download_git_package(package_url, version = nil, destination_package_path = nil)

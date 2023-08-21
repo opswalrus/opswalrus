@@ -22,10 +22,7 @@ module OpsWalrus
         # so we want to build up a command and send it to the remote host via HostDSL#run_ops
         @method_chain.unshift(Bundler::BUNDLE_DIR) if @is_invocation_a_call_to_package_in_bundle_dir
 
-        remote_run_command_args = "--script"
-
-        remote_run_command_args << " "
-        remote_run_command_args << @method_chain.join(" ")
+        remote_run_command_args = @method_chain.join(" ")
 
         unless args.empty?
           remote_run_command_args << " "
@@ -44,7 +41,7 @@ module OpsWalrus
           end.join(" ")
         end
 
-        @host_proxy.run_ops(:run, remote_run_command_args)
+        @host_proxy.run_ops(:run, "--script", remote_run_command_args)
       end
     end
   end
@@ -164,13 +161,15 @@ module OpsWalrus
     # end
 
     # runs the specified ops command with the specified command arguments
-    def run_ops(command, command_arguments, in_bundle_root_dir: true, verbose: false)
+    def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true, verbose: false)
       # e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops bundle unzip tmpops.zip
       # e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops run echo.ops args:foo args:bar
 
+      # cmd = "/home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
       cmd = "/home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
       cmd << " -v" if verbose
-      cmd << " #{command.to_s}"
+      cmd << " #{ops_command.to_s}"
+      cmd << " #{ops_command_options.to_s}" if ops_command_options
       cmd << " #{@tmp_bundle_root_dir}" if in_bundle_root_dir
       cmd << " #{command_arguments}" unless command_arguments.empty?
 

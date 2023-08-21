@@ -239,25 +239,6 @@ module OpsWalrus
 
         ops_file_path, operation_kv_args = find_entry_point_ops_file_in_dir(destination_package_path, package_operation_and_args)
 
-        # ops_file_path = nil
-        # base_path = Pathname.new(destination_package_path)
-        # path_parts = 0
-        # package_operation_and_args.each do |candidate_path_arg|
-        #   candidate_base_path = base_path.join(candidate_path_arg)
-        #   candidate_ops_file = candidate_base_path.sub_ext(".ops")
-        #   if candidate_ops_file.exist?
-        #     path_parts += 1
-        #     ops_file_path = candidate_ops_file
-        #     break
-        #   elsif candidate_base_path.exist?
-        #     path_parts += 1
-        #   else
-        #     raise Error, "Operation not found in #{repo_url}: #{candidate_base_path}"
-        #   end
-        #   base_path = candidate_base_path
-        # end
-        # operation_kv_args = package_operation_and_args.drop(path_parts)
-
         # for an original package_operation_and_args of ["github.com/davidkellis/my-package", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
         # we return: [ "#{pwd}/#{Bundler::BUNDLE_DIR}/github-com-davidkellis-my-package/operation1.ops", ["arg1:val1", "arg2:val2", "arg3:val3"] ]
         [ops_file_path, operation_kv_args, tmp_dir]

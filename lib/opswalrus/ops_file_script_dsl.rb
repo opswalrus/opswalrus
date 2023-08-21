@@ -157,11 +157,11 @@ module OpsWalrus
           # puts retval.inspect
 
           # cleanup
-          if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
-            host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip", tmp_bundle_root_dir)
-          else
-            host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip")
-          end
+          # if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
+          #   host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip", tmp_bundle_root_dir)
+          # else
+          #   host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip")
+          # end
 
           retval
         rescue SSHKit::Command::Failed => e
