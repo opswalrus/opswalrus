@@ -14,6 +14,7 @@ require_relative "hosts_file"
 require_relative "operation_runner"
 require_relative "bundler"
 require_relative "package_file"
+require_relative "version"
 
 
 module OpsWalrus
@@ -334,6 +335,10 @@ module OpsWalrus
       end
 
       selected_hosts.sort_by(&:to_s)
+    end
+
+    def print_version
+      puts VERSION
     end
 
     def unzip(zip_bundle_file = nil, output_dir = nil)

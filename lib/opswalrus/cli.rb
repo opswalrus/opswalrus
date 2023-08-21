@@ -28,11 +28,18 @@ module OpsWalrus
     desc 'Be verbose'
     switch [:v, :verbose]
 
-    desc 'Debug'
+    desc 'Turn on debug mode'
     switch [:d, :debug]
 
     flag [:h, :hosts], multiple: true, desc: "Specify the hosts.yaml file"
     flag [:t, :tags], multiple: true, desc: "Specify a set of tags to filter the hosts by"
+
+    desc 'Print version'
+    command :version do |c|
+      c.action do |global_options, options, args|
+        $app.print_version
+      end
+    end
 
     desc 'Report on the host inventory'
     long_desc 'Report on the host inventory'
