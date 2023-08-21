@@ -225,8 +225,9 @@ davidinfra
 │   └── davidinfra
 │       ├── caddy
 │       │   ├── install
-│       │   │   └── debian.ops
-│       │   └── install.ops
+│       │   │   ├── debian.ops
+│       │   │   └── install.ops
+│       │   └── restart.ops
 │       ├── hosts.yaml
 │       ├── main.ops
 │       ├── prepare_host
@@ -238,7 +239,8 @@ davidinfra
 ├── caddy
 │   ├── install
 │   │   └── debian.ops
-│   └── install.ops
+│   │   └── install.ops
+│   └── restart.ops
 ├── hosts.yaml
 ├── main.ops
 ├── prepare_host
@@ -255,17 +257,22 @@ The import and symbol resolution rules are as follows:
    Within the lexical scope of an ops file's ruby script, any ops files or subdirectories that are implicitly imported
    may be referenced by their name.
    For example:
-   - main.ops may invoke caddy/install.ops with the expression `caddy.install(...)`
+   - main.ops may invoke caddy/install.ops with the expression `caddy.restart(...)`
    - all.ops may invoke hostname.ops with the expression `hostname(...)`
-2. If there is an ops file and a directory that share the same name (with the exception of the .ops file extension),
-   then only the install.ops file may be referenced and invoked by other ops files, while the directory of the same name,
-   and its contents, may only be referenced from within the ops file of the matching name. This allows the details of
-   an operation to be encapsulated away and a public API be exposed through the ops file, while the details of the
-   implementation are hidden away in the ops files within the directory.
+2. If there is an ops file and a directory that share the same name (with the exception of the .ops file extension), and
+   are both contained by the same parent directory, then only the .ops file may be referenced and invoked by other ops files.
+   The directory of the same name will be treated as a library directory and if there is a Ruby source file in the library
+   directory with the same name, then that ruby file will automatically be loaded. Other ruby files within the library directory
+   will be required/loaded as instructed by the entrypoint .rb file.
+3. If there is an ops file and a directory that share the same name (with the exception of the .ops file extension), and
+   the ops file is contained by the directory of the same name, then the ops file is considered to be the primary API
+   interface for a sub-module that is implemented by the ops files and ruby scripts contained within the directory.
+   Consequently, the directory containing the ops file of the same name (with the exception of the .ops file extension)
+   may be invoked as if it were the primary API interface ops file.
    For example:
-   - main.ops may invoke `caddy.install(...)`, but it may not invoke `caddy.install.debian(...)`
-   - install.ops may invoke `install.debian(...)`, and reference other files or subpackages within the caddy/install directory
-3. Ops files may import packages or relative paths:
+   - main.ops may invoke `caddy.install(...)` as a shorthand syntax for `caddy.install.install(...)`
+   - install.ops may invoke `debian(...)`, and reference other files or subpackages within the caddy/install directory
+4. Ops files may import packages or relative paths:
    1. a package reference that matches one of the local package names in the dependencies captured in packages.yaml
    2. a package reference that resolves to a relative path pointing at a package directory
    3. a relative path that resolves to a directory containing ops files
