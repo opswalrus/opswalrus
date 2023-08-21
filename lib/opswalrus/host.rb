@@ -22,7 +22,7 @@ module OpsWalrus
         # so we want to build up a command and send it to the remote host via HostDSL#run_ops
         @method_chain.unshift(Bundler::BUNDLE_DIR) if @is_invocation_a_call_to_package_in_bundle_dir
 
-        remote_run_command_args = "--json"
+        remote_run_command_args = "--script"
 
         remote_run_command_args << " "
         remote_run_command_args << @method_chain.join(" ")
