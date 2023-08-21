@@ -30,7 +30,7 @@ module OpsWalrus
 
     # runtime_kv_args is an Array(String) of the form: ["arg1:val1", "arg2:val2", ...]
     # params_json_hash is a Hash representation of a JSON string
-    def run(runtime_kv_args, params_json_hash: nil, verbose: false)
+    def run(runtime_kv_args, params_json_hash: nil)
       params_hash = runtime_kv_args.reduce(params_json_hash || {}) do |memo, kv_pair_string|
         str_key, str_value = kv_pair_string.split(":", 2)
         if pre_existing_value = memo[str_key]
@@ -43,7 +43,7 @@ module OpsWalrus
         memo
       end
 
-      if verbose == 2
+      if app.debug?
         puts "Script:"
         puts @entry_point_ops_file.script
       end
@@ -72,7 +72,7 @@ module OpsWalrus
         Invocation::Error.new(e)
       end
 
-      if verbose == 2 && result.failure?
+      if app.debug? && result.failure?
         puts "Ops script error details:"
         puts "Error: #{result.value}"
         puts "Status code: #{result.exit_status}"

@@ -1,6 +1,7 @@
 require 'pathname'
 require 'yaml'
 require_relative 'git'
+require_relative 'host'
 require_relative 'ops_file_script'
 
 module OpsWalrus
@@ -9,7 +10,6 @@ module OpsWalrus
     attr_accessor :app
     attr_accessor :ops_file_path
     attr_accessor :yaml
-    attr_accessor :script
 
     def initialize(app, ops_file_path)
       @app = app
@@ -24,25 +24,39 @@ module OpsWalrus
       self.class == other.class && self.hash == other.hash
     end
 
+    def host_proxy_class
+      @host_proxy_class || (lazy_load_file && @host_proxy_class)
+    end
+
     def yaml
-      @yaml || (load_file && @yaml)
+      @yaml || (lazy_load_file && @yaml)
     end
 
     def script_line_offset
-      @script_line_offset || (load_file && @script_line_offset)
+      @script_line_offset || (lazy_load_file && @script_line_offset)
     end
 
+    # returns a subclass of OpsFileScript
+    def script_class
+      @script_class || (lazy_load_file && @script_class)
+    end
+
+    # returns an instance of the class returned by #script_class
     def script
-      @script || (load_file && @script)
+      @script || (lazy_load_file && @script)
     end
 
-    def load_file
+    def lazy_load_file
+      # puts "OpsFile#lazy_load_file for #{ops_file_path}"
+      # puts caller
       yaml, ruby_script = if @ops_file_path.exist?
         parse(File.read(@ops_file_path))
       end || ["", ""]
       @script_line_offset = yaml.lines.size + 1   # +1 to account for the ... line
       @yaml = YAML.load(yaml) || {}     # post_invariant: @yaml is a Hash
-      @script = OpsFileScript.new(self, ruby_script)
+      @script_class = OpsFileScript.define_for(self, ruby_script)
+      @script = @script_class.new(self, ruby_script)
+      @host_proxy_class = HostProxy.define_host_proxy_class(self)
     end
 
     def parse(script_string)
@@ -160,8 +174,7 @@ module OpsWalrus
     end
 
     def invoke(runtime_env, params_hash)
-      # puts "invoking: #{ops_file_path}"
-      script.invoke(runtime_env, params_hash)
+      script._invoke(runtime_env, params_hash)
     end
 
     def build_params_hash(*args, **kwargs)
@@ -243,6 +256,10 @@ module OpsWalrus
     # => [#<Pathname:/home/david/sync/projects/ops/example/davidinfra/caddy>, #<Pathname:/home/david/sync/projects/ops/example/davidinfra/prepare_host>, #<Pathname:/home/david/sync/projects/ops/example/davidinfra/roles>]
     def sibling_directories
       dirname.glob("*").select(&:directory?)
+    end
+
+    def to_s
+      "OpsFile: #{ops_file_path}"
     end
 
   end

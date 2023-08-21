@@ -62,6 +62,18 @@ module OpsWalrus
       @symbol_table = {}    # "symbol_name" => ops_file_or_child_namespace
     end
 
+    def to_s(indent = 0)
+      str = "Namespace: #{@dirname.to_s}\n"
+      @symbol_table.each do |k, v|
+        if v.is_a? Namespace
+          str << "#{'  ' * (indent)}|- #{k} : #{v.to_s(indent + 1)}\n"
+        else
+          str << "#{'  ' * (indent)}|- #{k} : #{v.to_s}\n"
+        end
+      end
+      str
+    end
+
     def add(symbol_name, ops_file_or_child_namespace)
       @symbol_table[symbol_name.to_s] = ops_file_or_child_namespace
     end
@@ -70,11 +82,27 @@ module OpsWalrus
       @symbol_table[symbol_name.to_s]
     end
 
+    # if this namespace contains an OpsFile of the same name as the namespace, e.g. pkg/install/install.ops, then this
+    # method invokes the OpsFile of that same name and returns the result;
+    # otherwise we return this namespace object
+    def _invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs, &block)
+      resolved_symbol = resolve_symbol(@dirname.basename)
+      if resolved_symbol.is_a? OpsFile
+        params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
+        resolved_symbol.invoke(runtime_env, params_hash)
+      else
+        self
+      end
+    end
+
     def method_missing(name, *args, **kwargs, &block)
+      # puts "method_missing: #{name}"
+      # puts caller
       resolved_symbol = resolve_symbol(name)
       case resolved_symbol
       when Namespace
         resolved_symbol
+        resolved_symbol._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
       when OpsFile
         params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
         resolved_symbol.invoke(runtime_env, params_hash)
@@ -95,6 +123,17 @@ module OpsWalrus
       @dir = dir
       @root_namespace = build_symbol_resolution_tree(@dir)
       @path_map = build_path_map(@root_namespace)
+
+      # puts "*" * 80
+      # puts "load path for #{@dir}"
+      # puts "-" * 80
+      # puts 'root namespace'
+      # puts @root_namespace.to_s
+      # puts "-" * 80
+      # puts 'path map'
+      # @path_map.each do |k,v|
+      #   puts "#{k.to_s}: #{v.to_s}"
+      # end
 
       @dynamic_package_additions_memo = {}
     end
@@ -204,19 +243,11 @@ module OpsWalrus
       configure_sshkit
     end
 
-    # def with_sudo_password(password, &block)
-    #   @interaction_handler.with_sudo_password(password, &block)
-    # end
-
     # input_mapping : Hash[ String | Regex => String ]
     # sudo_password : String
     def handle_input(input_mapping, sudo_password = nil, &block)
       @interaction_handler.with_mapping(input_mapping, sudo_password, &block)
     end
-
-    # def handle_input_with_sudo_password(input_mapping, password, &block)
-    #   @interaction_handler.with_mapping(input_mapping, password, &block)
-    # end
 
     # configure sshkit globally
     def configure_sshkit

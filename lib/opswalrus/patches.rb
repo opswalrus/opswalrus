@@ -1,4 +1,5 @@
 require 'json'
+require 'pathname'
 
 class String
   def escape_single_quotes

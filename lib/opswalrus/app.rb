@@ -159,7 +159,7 @@ module OpsWalrus
       end
 
       op = OperationRunner.new(self, ops_file)
-      result = op.run(operation_kv_args, params_json_hash: @params, verbose: @verbose)
+      result = op.run(operation_kv_args, params_json_hash: @params)
       exit_status = result.exit_status
 
       if @verbose

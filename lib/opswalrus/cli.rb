@@ -15,7 +15,8 @@ module OpsWalrus
 
     # this is invoked on an unhandled exception or a call to exit_now!
     on_error do |exception|
-      # puts "*" * 80
+      next(false) if exception.is_a? GLI::CustomExit
+
       puts "catchall exception handler:"
       puts exception.message
       puts exception.backtrace.join("\n")
