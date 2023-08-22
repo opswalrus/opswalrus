@@ -39,5 +39,5 @@ RUN git config --global --add safe.directory /workdir
 
 # Set the entrypoint to run the installed binary in /workdir
 # Example:  docker run -it -v "$PWD:/workdir" ops
-# ENTRYPOINT ["ops"]
-CMD ["ops"]
+ENTRYPOINT ["ops"]
+# CMD ["ops"]

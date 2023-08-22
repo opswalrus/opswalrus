@@ -11,17 +11,19 @@ You have two options:
 ## Rubygems install
 
 ```shell
-gem install opswalrus
+❯ gem install opswalrus
 
-ops version
+❯ ops version
+1.0.13
 ```
 
 ## Docker install
 
 ```shell
-alias ops='docker run --rm -it -v $HOME/.ssh:/root/.ssh -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}/:/workdir ghcr.io/opswalrus/ops'
+❯ alias ops='docker run --rm -it -v $HOME/.ssh:/root/.ssh -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}/:/workdir ghcr.io/opswalrus/ops'
 
-ops version
+❯ ops version
+1.0.13
 ```
 
 # Examples

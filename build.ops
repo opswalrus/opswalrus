@@ -51,4 +51,4 @@ end
 
 totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
 sh("Push gem", input: {"You have enabled multi-factor authentication. Please enter OTP code." => "#{totp}\n"}) { 'gem push opswalrus-{{ version }}.gem' }
-sh("Build docker image") { 'docker build -t opswalrus/ops:{{ version }} .' }
+sh("Build docker image") { 'docker build -t opswalrus/ops:latest -t opswalrus/ops:{{ version }} .' }
