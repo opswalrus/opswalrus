@@ -23,6 +23,12 @@ module OpsWalrus
       super(local_name)
       @package_reference = package_reference
     end
+    def to_s
+      "PackageDependencyReference(local_name=#{@local_name}, package_reference=#{@package_reference})"
+    end
+    def summary
+      "#{local_name}: #{package_reference.summary}"
+    end
   end
 
   class DirectoryReference < ImportReference
@@ -30,6 +36,12 @@ module OpsWalrus
     def initialize(local_name, dirname)
       super(local_name)
       @dirname = dirname
+    end
+    def to_s
+      "DirectoryReference(local_name=#{@local_name}, dirname=#{@dirname})"
+    end
+    def summary
+      "#{local_name}: #{dirname}"
     end
   end
 
@@ -39,6 +51,12 @@ module OpsWalrus
       super(local_name)
       @package_reference = package_reference
     end
+    def to_s
+      "DynamicPackageImportReference(local_name=#{@local_name}, package_reference=#{@package_reference})"
+    end
+    def summary
+      "#{local_name}: #{package_reference.summary}"
+    end
   end
 
   class OpsFileReference < ImportReference
@@ -46,6 +64,12 @@ module OpsWalrus
     def initialize(local_name, ops_file_path)
       super(local_name)
       @ops_file_path = ops_file_path
+    end
+    def to_s
+      "DirectoryReference(local_name=#{@local_name}, ops_file_path=#{@ops_file_path})"
+    end
+    def summary
+      "#{local_name}: #{ops_file_path}"
     end
   end
 
@@ -178,6 +202,10 @@ module OpsWalrus
       path_map
     end
 
+    def includes_path?(path)
+      !!@path_map[path]
+    end
+
     def dynamically_add_new_package_dir(new_package_dir)
       # patch the symbol resolution (namespace) tree
       dir_basename = new_package_dir.basename
@@ -198,19 +226,22 @@ module OpsWalrus
 
     # returns a Namespace or OpsFile
     def resolve_symbol(origin_ops_file, symbol_name)
-      lookup_namespace(origin_ops_file)&.resolve_symbol(symbol_name)
+      resolved_namespace_or_ops_file = lookup_namespace(origin_ops_file)&.resolve_symbol(symbol_name)
+      App.instance.debug("LoadPath#resolve_symbol(#{origin_ops_file}, #{symbol_name}) -> #{resolved_namespace_or_ops_file}")
+      resolved_namespace_or_ops_file
     end
 
     # returns a Namespace | OpsFile
     def resolve_import_reference(origin_ops_file, import_reference)
-      case import_reference
+      resolved_namespace_or_ops_file = case import_reference
       when PackageDependencyReference
         # puts "root namespace: #{@root_namespace.symbol_table}"
-        @root_namespace.resolve_symbol(import_reference.package_reference.import_resolution_dirname)   # returns the Namespace associated with the bundled package dirname (i.e. the local name)
+        @root_namespace.resolve_symbol(import_reference.package_reference.import_resolution_dirname)   # returns the Namespace associated with the bundled package import_resolution_dirname (i.e. the local name)
       when DynamicPackageImportReference
         dynamic_package_reference = import_reference.package_reference
         @dynamic_package_additions_memo[dynamic_package_reference] ||= begin
           # puts "Downloading dynamic package: #{dynamic_package_reference.inspect}"
+          App.instance.debug("Downloading dynamic package: #{dynamic_package_reference}")
           dynamically_added_package_dir = @runtime_env.app.bundler.download_git_package(dynamic_package_reference.package_uri, dynamic_package_reference.version)
           dynamically_add_new_package_dir(dynamically_added_package_dir)
           dynamically_added_package_dir
@@ -221,6 +252,8 @@ module OpsWalrus
       when OpsFileReference
         @path_map[import_reference.ops_file_path]
       end
+      App.instance.debug("LoadPath#resolve_import_reference(#{origin_ops_file}, #{import_reference}) -> #{resolved_namespace_or_ops_file}")
+      resolved_namespace_or_ops_file
     end
   end
 
@@ -315,23 +348,41 @@ module OpsWalrus
       ops_file.invoke(self, params_hash)
     end
 
+    def find_load_path_that_includes_path(path)
+      load_path = [@bundle_load_path, @app_load_path].find {|load_path| load_path.includes_path?(path) }
+      raise SymbolResolutionError, "No load path includes the path: #{path}" unless load_path
+      load_path
+    end
+
     # returns a Namespace | OpsFile
     def resolve_sibling_symbol(origin_ops_file, symbol_name)
-      @app_load_path.resolve_symbol(origin_ops_file, symbol_name)
+      # if the origin_ops_file's file path is contained within a Bundler::BUNDLE_DIR directory, then we want to consult the @bundle_load_path
+      # otherwise, we want to consult the @app_load_path
+      load_path = find_load_path_that_includes_path(origin_ops_file.ops_file_path)
+      namespace_or_ops_file = load_path.resolve_symbol(origin_ops_file, symbol_name)
+      raise SymbolResolutionError, "Symbol '#{symbol_name}' not in load path for #{origin_ops_file.ops_file_path}" unless namespace_or_ops_file
+      namespace_or_ops_file
     end
 
     # returns a Namespace | OpsFile
     def resolve_import_reference(origin_ops_file, import_reference)
-      case import_reference
+      load_path = case import_reference
 
-      # we know we're dealing with a package dependency reference, so we want to do the lookup in the bundle load path, where package dependencies live
+      # We know we're dealing with a package dependency reference, so we want to do the lookup in the bundle load path, where package dependencies live.
+      # Package references are guaranteed to live in the bundle dir
       when PackageDependencyReference, DynamicPackageImportReference
-        @bundle_load_path.resolve_import_reference(origin_ops_file, import_reference)
-
-      # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to do the lookup in the app load path
-      when DirectoryReference, OpsFileReference
-        @app_load_path.resolve_import_reference(origin_ops_file, import_reference)
+        @bundle_load_path
+      when DirectoryReference
+        find_load_path_that_includes_path(import_reference.dirname)
+      when OpsFileReference
+        find_load_path_that_includes_path(import_reference.ops_file_path)
       end
+
+      namespace_or_ops_file = load_path.resolve_import_reference(origin_ops_file, import_reference)
+
+      raise SymbolResolutionError, "Import reference '#{import_reference.summary}' not in load path for #{origin_ops_file.ops_file_path}" unless namespace_or_ops_file
+
+      namespace_or_ops_file
     end
 
   end

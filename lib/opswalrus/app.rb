@@ -1,12 +1,14 @@
 require "citrus"
 require "io/console"
 require "json"
+require "logger"
 require "random/formatter"
 require "shellwords"
 require "socket"
 require "stringio"
 require "yaml"
 require "pathname"
+require_relative "errors"
 require_relative "patches"
 require_relative "git"
 require_relative "host"
@@ -18,9 +20,6 @@ require_relative "version"
 
 
 module OpsWalrus
-  class Error < StandardError
-  end
-
   class App
     def self.instance(*args)
       @instance ||= new(*args)
@@ -32,6 +31,8 @@ module OpsWalrus
     attr_reader :local_hostname
 
     def initialize(pwd = Dir.pwd)
+      @logger = Logger.new($stdout, level: Logger::INFO)
+
       @verbose = false
       @sudo_user = nil
       @sudo_password = nil
@@ -89,6 +90,7 @@ module OpsWalrus
 
     def set_verbose(verbose)
       @verbose = verbose
+      @logger.debug! if verbose?
     end
 
     def verbose?
@@ -97,6 +99,22 @@ module OpsWalrus
 
     def debug?
       @verbose == 2
+    end
+
+    def error(msg)
+      @logger.error(msg)
+    end
+
+    def warn(msg)
+      @logger.warn(msg)
+    end
+
+    def log(msg)
+      @logger.info(msg)
+    end
+
+    def debug(msg)
+      @logger.debug(msg)
     end
 
     def set_pwd(pwd)
@@ -147,13 +165,9 @@ module OpsWalrus
     def run(package_operation_and_args)
       return 0 if package_operation_and_args.empty?
 
-      ops_file_path, operation_kv_args, tmp_dir = get_entry_point_ops_file_and_args(package_operation_and_args)
-      ops_file = OpsFile.new(self, ops_file_path)
+      ops_file_path, operation_kv_args, tmp_bundle_root_dir = get_entry_point_ops_file_and_args(package_operation_and_args)
 
-      # if the ops file is part of a package, then set the package directory as the app's pwd
-      if ops_file.package_file && ops_file.package_file.dirname.to_s !~ /#{Bundler::BUNDLE_DIR}/
-        ops_file = set_pwd_to_ops_file_package_directory(ops_file)
-      end
+      ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
 
       if @verbose
         puts "Running: #{ops_file.ops_file_path}"
@@ -177,19 +191,52 @@ module OpsWalrus
 
       exit_status
     ensure
-      FileUtils.remove_entry(tmp_dir) if tmp_dir
+      FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
+    end
+
+    def load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
+      ops_file = OpsFile.new(self, ops_file_path)
+
+      # we are running the ops file from within a temporary bundle root directory created by unzipping a zip bundle workspace
+      if tmp_bundle_root_dir
+        return set_pwd_and_rebase_ops_file(tmp_bundle_root_dir, ops_file)
+      end
+
+      # if the ops file is contained within a bundle directory, then that means we're probably running this command invocation
+      # on a remote host, e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops run --script /tmp/d20230822-18829-2j5ij2 opswalrus_bundle docker install install
+      # and the corresponding entry point, e.g. /tmp/d20230822-18829-2j5ij2/opswalrus_bundle/docker/install/install.ops
+      # is actually being run from a temporary zip bundle root directory
+      # so we want to set the app's pwd to be the parent directory of the Bundler::BUNDLE_DIR directory, e.g. /tmp/d20230822-18829-2j5ij2
+      if ops_file.ops_file_path.to_s =~ /#{Bundler::BUNDLE_DIR}/
+        return set_pwd_to_parent_of_bundle_dir(ops_file)
+      end
+
+      # if the ops file is part of a package, then set the package directory as the app's pwd
+      if ops_file.package_file && ops_file.package_file.dirname.to_s !~ /#{Bundler::BUNDLE_DIR}/
+        return set_pwd_to_ops_file_package_directory(ops_file)
+      end
+
+      ops_file
+    end
+
+    def set_pwd_to_parent_of_bundle_dir(ops_file)
+      match = /^(.*)#{Bundler::BUNDLE_DIR}.*$/.match(ops_file.ops_file_path.to_s)
+      parent_directory_path = match.captures.first.to_pathname.cleanpath
+      set_pwd_and_rebase_ops_file(parent_directory_path, ops_file)
     end
 
     # sets the App's pwd to the ops file's package directory and
-    # returns a new OpsFile that points at the revised pathname with considered as relative to the package file's directory
+    # returns a new OpsFile that points at the revised pathname when considered as relative to the package file's directory
     def set_pwd_to_ops_file_package_directory(ops_file)
-      # puts "set pwd: #{ops_file.package_file.dirname}"
-      set_pwd(ops_file.package_file.dirname)
-      rebased_ops_file_relative_path = ops_file.ops_file_path.relative_path_from(ops_file.package_file.dirname)
-      # note: rebased_ops_file_relative_path is a relative path that is relative to ops_file.package_file.dirname
-      # puts "rebased path: #{rebased_ops_file_relative_path}"
-      absolute_ops_file_path = ops_file.package_file.dirname.join(rebased_ops_file_relative_path)
-      # puts "absolute path: #{absolute_ops_file_path}"
+      set_pwd_and_rebase_ops_file(ops_file.package_file.dirname, ops_file)
+    end
+
+    # returns a new OpsFile that points at the revised pathname when considered as relative to the new working directory
+    def set_pwd_and_rebase_ops_file(new_working_directory, ops_file)
+      set_pwd(new_working_directory)
+      rebased_ops_file_relative_path = ops_file.ops_file_path.relative_path_from(new_working_directory)
+      # note: rebased_ops_file_relative_path is a relative path that is relative to new_working_directory
+      absolute_ops_file_path = new_working_directory.join(rebased_ops_file_relative_path)
       OpsFile.new(self, absolute_ops_file_path)
     end
 
@@ -203,18 +250,18 @@ module OpsWalrus
     # - ["../../my-package/operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
     # - ["../../my-package/operation1"]
     #
-    # returns 3-tuple of the form: [ ops_file_path, operation_kv_args, optional_tmp_dir ]
-    # such that the third item - optional_tmp_dir - if present, should be deleted after the script has completed running
+    # returns 3-tuple of the form: [ ops_file_path, operation_kv_args, optional_tmp_bundle_root_dir ]
+    # such that the third item - optional_tmp_bundle_root_dir - if present, should be deleted after the script has completed running
     def get_entry_point_ops_file_and_args(package_operation_and_args)
       package_operation_and_args = package_operation_and_args.dup
       package_or_ops_file_reference = package_operation_and_args.slice!(0, 1).first
-      tmp_dir = nil
+      tmp_bundle_root_dir = nil
 
       case
       when Dir.exist?(package_or_ops_file_reference)
         dir = package_or_ops_file_reference
         ops_file_path, operation_kv_args = find_entry_point_ops_file_in_dir(dir, package_operation_and_args)
-        [ops_file_path, operation_kv_args, tmp_dir]
+        [ops_file_path, operation_kv_args, tmp_bundle_root_dir]
       when File.exist?(package_or_ops_file_reference)
         first_filepath = package_or_ops_file_reference.to_pathname.realpath
 
@@ -222,18 +269,18 @@ module OpsWalrus
         when ".ops"
           [first_filepath, package_operation_and_args]
         when ".zip"
-          tmp_dir = Dir.mktmpdir.to_pathname    # this is the temporary bundle root dir
+          tmp_bundle_root_dir = Dir.mktmpdir.to_pathname    # this is the temporary bundle root dir
 
           # unzip the bundle into the temp directory
-          DirZipper.unzip(first_filepath, tmp_dir)
+          DirZipper.unzip(first_filepath, tmp_bundle_root_dir)
 
-          find_entry_point_ops_file_in_dir(tmp_dir, package_operation_and_args)
+          find_entry_point_ops_file_in_dir(tmp_bundle_root_dir, package_operation_and_args)
         else
           raise Error, "Unknown file type for entrypoint: #{first_filepath}"
         end
 
         # operation_kv_args = package_operation_and_args
-        [ops_file_path, operation_kv_args, tmp_dir]
+        [ops_file_path, operation_kv_args, tmp_bundle_root_dir]
       when repo_url = Git.repo?(package_or_ops_file_reference)
         destination_package_path = bundler.download_git_package(repo_url)
 
@@ -241,7 +288,7 @@ module OpsWalrus
 
         # for an original package_operation_and_args of ["github.com/davidkellis/my-package", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
         # we return: [ "#{pwd}/#{Bundler::BUNDLE_DIR}/github-com-davidkellis-my-package/operation1.ops", ["arg1:val1", "arg2:val2", "arg3:val3"] ]
-        [ops_file_path, operation_kv_args, tmp_dir]
+        [ops_file_path, operation_kv_args, tmp_bundle_root_dir]
       else
         raise Error, "Unknown operation reference: #{package_or_ops_file_reference.inspect}"
       end

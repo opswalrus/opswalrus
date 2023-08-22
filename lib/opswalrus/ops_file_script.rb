@@ -14,22 +14,15 @@ module OpsWalrus
       # define methods for the OpsFile's local_symbol_table: local imports and private lib directory
       ops_file.local_symbol_table.each do |symbol_name, import_reference|
         unless methods_defined.include? symbol_name
-          # puts "defining method for local symbol table entry: #{symbol_name}"
+          App.instance.debug "defining method for local symbol table entry: #{symbol_name}"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            # puts "resolving local symbol table entry: #{symbol_name}"
+            App.instance.debug "resolving local symbol table entry: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
-            # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+            App.instance.debug "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
             invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
             invocation_context._invoke(*args, **kwargs)
 
-            # case namespace_or_ops_file
-            # when Namespace
-            #   namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-            # when OpsFile
-            #   params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
-            #   namespace_or_ops_file.invoke(@runtime_env, params_hash)
-            # end
           end
           methods_defined << symbol_name
         end
@@ -40,26 +33,18 @@ module OpsWalrus
       sibling_symbol_table_names |= ops_file.dirname.glob("*.ops").map {|ops_file_path| ops_file_path.basename(".ops").to_s }   # OpsFiles
       sibling_symbol_table_names |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
       # puts "sibling_symbol_table_names=#{sibling_symbol_table_names}"
-      # puts "methods_defined=#{methods_defined}"
+      App.instance.debug "methods_defined=#{methods_defined}"
       sibling_symbol_table_names.each do |symbol_name|
         unless methods_defined.include? symbol_name
-          # puts "defining method for implicit imports: #{symbol_name}"
+          App.instance.debug "defining method for implicit imports: #{symbol_name}"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            # puts "resolving implicit import: #{symbol_name}"
+            App.instance.debug "resolving implicit import: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
-            # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+            App.instance.debug "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
             invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
             invocation_context._invoke(*args, **kwargs)
 
-
-            # case namespace_or_ops_file
-            # when Namespace
-            #   namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-            # when OpsFile
-            #   params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
-            #   namespace_or_ops_file.invoke(@runtime_env, params_hash)
-            # end
           end
           methods_defined << symbol_name
         end

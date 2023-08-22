@@ -58,25 +58,25 @@ module OpsWalrus
           Invocation::Success.new(ruby_script_return)
         end
       rescue SSHKit::Command::Failed => e
-        puts "[!] Command failed: #{e.message}"
+        App.instance.error "[!] Command failed: #{e.message}"
       rescue Error => e
-        $stderr.puts "Error: Ops script crashed."
-        $stderr.puts e.message
-        $stderr.puts e.backtrace.join("\n")
+        App.instance.error "Error: Ops script crashed."
+        App.instance.error e.message
+        App.instance.error e.backtrace.take(5).join("\n")
         Invocation::Error.new(e)
       rescue => e
-        $stderr.puts "Unhandled Error: Ops script crashed."
-        $stderr.puts e.class
-        $stderr.puts e.message
-        $stderr.puts e.backtrace.join("\n")
+        App.instance.error "Unhandled Error: Ops script crashed."
+        App.instance.error e.class
+        App.instance.error e.message
+        App.instance.error e.backtrace.take(10).join("\n")
         Invocation::Error.new(e)
       end
 
       if app.debug? && result.failure?
-        puts "Ops script error details:"
-        puts "Error: #{result.value}"
-        puts "Status code: #{result.exit_status}"
-        puts @entry_point_ops_file.script
+        App.instance.debug "Ops script error details:"
+        App.instance.debug "Error: #{result.value}"
+        App.instance.debug "Status code: #{result.exit_status}"
+        App.instance.debug @entry_point_ops_file.script
       end
 
       result

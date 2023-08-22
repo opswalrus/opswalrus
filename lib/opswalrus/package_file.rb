@@ -37,6 +37,17 @@ module OpsWalrus
       local_name
     end
 
+    def to_s
+      "PackageReference(local_name=#{@local_name}, package_uri=#{@package_uri}, version=#{@version})"
+    end
+
+    def summary
+      if version
+        "#{package_uri}:#{version}"
+      else
+        package_uri
+      end
+    end
   end
 
   # these are dynamic package references defined at runtime when an OpsFile's imports are being evaluated.
