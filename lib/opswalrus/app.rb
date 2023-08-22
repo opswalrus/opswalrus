@@ -3,6 +3,7 @@ require "io/console"
 require "json"
 require "logger"
 require "random/formatter"
+require "ougai"
 require "shellwords"
 require "socket"
 require "stringio"
@@ -31,7 +32,9 @@ module OpsWalrus
     attr_reader :local_hostname
 
     def initialize(pwd = Dir.pwd)
-      @logger = Logger.new($stdout, level: Logger::INFO)
+      @logger = Ougai::Logger.new($stdout, level: Logger::INFO)    # Logger.new($stdout, level: Logger::INFO)
+      @logger.formatter = Ougai::Formatters::Readable.new
+
 
       @verbose = false
       @sudo_user = nil
@@ -115,6 +118,10 @@ module OpsWalrus
 
     def debug(msg)
       @logger.debug(msg)
+    end
+
+    def trace(msg)
+      @logger.trace(msg)
     end
 
     def set_pwd(pwd)
