@@ -173,6 +173,10 @@ module OpsWalrus
 
     # the subclasses of this class will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
 
+    def to_s
+      @_host.to_s
+    end
+
     def method_missing(name, ...)
       @_host.send(name, ...)
     end
