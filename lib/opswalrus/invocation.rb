@@ -116,14 +116,15 @@ module OpsWalrus
 
     def _invoke_local(*args, **kwargs)
       params_hash = @namespace_or_ops_file.build_params_hash(*args, **kwargs)
-      namespace_or_ops_file.invoke(@runtime_env, params_hash)
+      @namespace_or_ops_file.invoke(@runtime_env, params_hash)
     end
 
     # if this namespace contains an OpsFile of the same name as the namespace, e.g. pkg/install/install.ops, then this
     # method invokes the OpsFile of that same name and returns the result;
     # otherwise we return this namespace object
     def _invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs, &block)
-      resolved_symbol = @namespace_or_ops_file.resolve_symbol(@dirname.basename)
+      method_name = @namespace_or_ops_file.dirname.basename
+      resolved_symbol = @namespace_or_ops_file.resolve_symbol(method_name)
       if resolved_symbol.is_a? OpsFile
         params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
         resolved_symbol.invoke(runtime_env, params_hash)
