@@ -173,9 +173,8 @@ module OpsWalrus
         end
       end
 
-      package_uri = package_url
-      if Git.repo?(package_uri)                                                          # git repo
-        download_git_package(package_url, version, destination_package_path)
+      if package_uri = Git.repo?(package_url)                                                          # git repo
+        download_git_package(package_uri, version, destination_package_path)
       end
     end
 

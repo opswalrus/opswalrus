@@ -114,10 +114,11 @@ module OpsWalrus
 
   module OpsFileScriptDSL
     def ssh(*args, **kwargs, &block)
-      hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(host) }
+      runtime_env = @runtime_env
+
+      hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(runtime_env, host) }
       sshkit_hosts = hosts.map(&:sshkit_host)
       sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
-      runtime_env = @runtime_env
       local_host = self
       # bootstrap_shell_script = BootstrapLinuxHostShellScript
       # on sshkit_hosts do |sshkit_host|

@@ -1,4 +1,5 @@
 require 'set'
+require_relative 'invocation'
 require_relative 'ops_file_script_dsl'
 
 module OpsWalrus
@@ -7,8 +8,6 @@ module OpsWalrus
 
     def self.define_for(ops_file, ruby_script)
       klass = Class.new(OpsFileScript)
-
-      # puts "OpsFileScript.define_for(#{ops_file.to_s}, #{ruby_script.to_s})"
 
       methods_defined = Set.new
 
@@ -21,14 +20,16 @@ module OpsWalrus
             namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
             # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
-            case namespace_or_ops_file
-            when Namespace
-              namespace_or_ops_file
-              namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-            when OpsFile
-              params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
-              namespace_or_ops_file.invoke(@runtime_env, params_hash)
-            end
+            invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
+            invocation_context._invoke(*args, **kwargs)
+
+            # case namespace_or_ops_file
+            # when Namespace
+            #   namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
+            # when OpsFile
+            #   params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
+            #   namespace_or_ops_file.invoke(@runtime_env, params_hash)
+            # end
           end
           methods_defined << symbol_name
         end
@@ -48,14 +49,17 @@ module OpsWalrus
             namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
             # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
-            case namespace_or_ops_file
-            when Namespace
-              namespace_or_ops_file
-              namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-            when OpsFile
-              params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
-              namespace_or_ops_file.invoke(@runtime_env, params_hash)
-            end
+            invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
+            invocation_context._invoke(*args, **kwargs)
+
+
+            # case namespace_or_ops_file
+            # when Namespace
+            #   namespace_or_ops_file._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
+            # when OpsFile
+            #   params_hash = namespace_or_ops_file.build_params_hash(*args, **kwargs)
+            #   namespace_or_ops_file.invoke(@runtime_env, params_hash)
+            # end
           end
           methods_defined << symbol_name
         end

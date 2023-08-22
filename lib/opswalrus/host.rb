@@ -2,6 +2,7 @@ require "set"
 require "sshkit"
 
 require_relative "interaction_handlers"
+require_relative "invocation"
 
 module OpsWalrus
 
@@ -48,6 +49,52 @@ module OpsWalrus
 
   # the subclasses of HostProxy will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
   class HostProxy
+    # def self.define_host_proxy_class(ops_file)
+    #   klass = Class.new(HostProxy)
+
+    #   methods_defined = Set.new
+
+    #   # define methods for every import in the script
+    #   ops_file.local_symbol_table.each do |symbol_name, import_reference|
+    #     unless methods_defined.include? symbol_name
+    #       # puts "1. defining: #{symbol_name}(...)"
+    #       klass.define_method(symbol_name) do |*args, **kwargs, &block|
+    #         invocation_builder = case import_reference
+    #         # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
+    #         # therefore, we want to reference the specified ops file with respect to the bundle dir
+    #         when PackageDependencyReference
+    #           HostProxyOpsFileInvocationBuilder.new(self, true)
+
+    #         # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
+    #         # the specified ops file with respect to the root directory, and not with respect to the bundle dir
+    #         when DirectoryReference, OpsFileReference
+    #           HostProxyOpsFileInvocationBuilder.new(self, false)
+    #         end
+
+    #         invocation_builder.send(symbol_name, *args, **kwargs, &block)
+    #       end
+    #       methods_defined << symbol_name
+    #     end
+    #   end
+
+    #   # define methods for every Namespace or OpsFile within the namespace that the OpsFile resides within
+    #   sibling_symbol_table = Set.new
+    #   sibling_symbol_table |= ops_file.dirname.glob("*.ops").map {|ops_file_path| ops_file_path.basename(".ops").to_s }   # OpsFiles
+    #   sibling_symbol_table |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
+    #   sibling_symbol_table.each do |symbol_name|
+    #     unless methods_defined.include? symbol_name
+    #       # puts "2. defining: #{symbol_name}(...)"
+    #       klass.define_method(symbol_name) do |*args, **kwargs, &block|
+    #         invocation_builder = HostProxyOpsFileInvocationBuilder.new(self, false)
+    #         invocation_builder.invoke(symbol_name, *args, **kwargs, &block)
+    #       end
+    #       methods_defined << symbol_name
+    #     end
+    #   end
+
+    #   klass
+    # end
+
     def self.define_host_proxy_class(ops_file)
       klass = Class.new(HostProxy)
 
@@ -56,21 +103,40 @@ module OpsWalrus
       # define methods for every import in the script
       ops_file.local_symbol_table.each do |symbol_name, import_reference|
         unless methods_defined.include? symbol_name
-          # puts "1. defining: #{symbol_name}(...)"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            invocation_builder = case import_reference
+            # puts "resolving local symbol table entry: #{symbol_name}"
+            namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
+            # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+
+            invocation_context = case import_reference
             # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
             # therefore, we want to reference the specified ops file with respect to the bundle dir
             when PackageDependencyReference
-              HostProxyOpsFileInvocationBuilder.new(self, true)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true)
 
             # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
             # the specified ops file with respect to the root directory, and not with respect to the bundle dir
             when DirectoryReference, OpsFileReference
-              HostProxyOpsFileInvocationBuilder.new(self, false)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false)
             end
 
-            invocation_builder.send(symbol_name, *args, **kwargs, &block)
+            invocation_context._invoke(*args, **kwargs)
+
+
+
+            # invocation_builder = case import_reference
+            # # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
+            # # therefore, we want to reference the specified ops file with respect to the bundle dir
+            # when PackageDependencyReference
+            #   HostProxyOpsFileInvocationBuilder.new(self, true)
+
+            # # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
+            # # the specified ops file with respect to the root directory, and not with respect to the bundle dir
+            # when DirectoryReference, OpsFileReference
+            #   HostProxyOpsFileInvocationBuilder.new(self, false)
+            # end
+
+            # invocation_builder.send(symbol_name, *args, **kwargs, &block)
           end
           methods_defined << symbol_name
         end
@@ -84,8 +150,11 @@ module OpsWalrus
         unless methods_defined.include? symbol_name
           # puts "2. defining: #{symbol_name}(...)"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            invocation_builder = HostProxyOpsFileInvocationBuilder.new(self, false)
-            invocation_builder.invoke(symbol_name, *args, **kwargs, &block)
+            # invocation_builder = HostProxyOpsFileInvocationBuilder.new(self, false)
+            # invocation_builder.invoke(symbol_name, *args, **kwargs, &block)
+
+            invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false)
+            invocation_context._invoke(*args, **kwargs)
           end
           methods_defined << symbol_name
         end
@@ -97,8 +166,9 @@ module OpsWalrus
 
     attr_accessor :_host
 
-    def initialize(host)
+    def initialize(runtime_env, host)
       @_host = host
+      @runtime_env = runtime_env
     end
 
     # the subclasses of this class will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects

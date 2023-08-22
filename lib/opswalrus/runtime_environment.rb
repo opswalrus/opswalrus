@@ -82,32 +82,31 @@ module OpsWalrus
       @symbol_table[symbol_name.to_s]
     end
 
-    # if this namespace contains an OpsFile of the same name as the namespace, e.g. pkg/install/install.ops, then this
-    # method invokes the OpsFile of that same name and returns the result;
-    # otherwise we return this namespace object
-    def _invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs, &block)
-      resolved_symbol = resolve_symbol(@dirname.basename)
-      if resolved_symbol.is_a? OpsFile
-        params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
-        resolved_symbol.invoke(runtime_env, params_hash)
-      else
-        self
-      end
-    end
+    # # if this namespace contains an OpsFile of the same name as the namespace, e.g. pkg/install/install.ops, then this
+    # # method invokes the OpsFile of that same name and returns the result;
+    # # otherwise we return this namespace object
+    # def _invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs, &block)
+    #   resolved_symbol = resolve_symbol(@dirname.basename)
+    #   if resolved_symbol.is_a? OpsFile
+    #     params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
+    #     resolved_symbol.invoke(runtime_env, params_hash)
+    #   else
+    #     self
+    #   end
+    # end
 
-    def method_missing(name, *args, **kwargs, &block)
-      # puts "method_missing: #{name}"
-      # puts caller
-      resolved_symbol = resolve_symbol(name)
-      case resolved_symbol
-      when Namespace
-        resolved_symbol
-        resolved_symbol._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-      when OpsFile
-        params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
-        resolved_symbol.invoke(runtime_env, params_hash)
-      end
-    end
+    # def method_missing(name, *args, **kwargs, &block)
+    #   # puts "method_missing: #{name}"
+    #   # puts caller
+    #   resolved_symbol = resolve_symbol(name)
+    #   case resolved_symbol
+    #   when Namespace
+    #     resolved_symbol._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
+    #   when OpsFile
+    #     params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
+    #     resolved_symbol.invoke(runtime_env, params_hash)
+    #   end
+    # end
   end
 
   # the assumption is that we have a bundle directory with all the packages in it
@@ -316,7 +315,7 @@ module OpsWalrus
       ops_file.invoke(self, params_hash)
     end
 
-    # returns a Namespace or OpsFile
+    # returns a Namespace | OpsFile
     def resolve_sibling_symbol(origin_ops_file, symbol_name)
       @app_load_path.resolve_symbol(origin_ops_file, symbol_name)
     end
