@@ -32,6 +32,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # gem dependencies
+  spec.add_dependency "amazing_print", "~> 1.5"
   spec.add_dependency "citrus", "~> 3.0"
   spec.add_dependency "gli", "~> 2.21"
   spec.add_dependency "git", "~> 1.18"
