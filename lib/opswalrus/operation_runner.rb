@@ -59,8 +59,8 @@ module OpsWalrus
       params_hash = build_params_hash(runtime_kv_args, params_json_hash: params_json_hash)
 
       if app.debug?
-        App.instance.debug "Script:"
-        App.instance.debug @entry_point_ops_file.script
+        App.instance.trace "Script:"
+        App.instance.trace @entry_point_ops_file.script
       end
 
       result = begin

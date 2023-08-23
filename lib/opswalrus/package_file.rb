@@ -15,10 +15,6 @@ module OpsWalrus
       @local_name, @package_uri, @version = local_name, package_uri, version
     end
 
-    def sanitized_package_uri
-      sanitize_path(@package_uri)
-    end
-
     def sanitize_path(path)
       # found this at https://apidock.com/rails/v5.2.3/ActiveStorage/Filename/sanitized
       path.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "ï¿½").strip.tr("\u{202E}%$|:;/\t\r\n\\", "-")
@@ -53,8 +49,13 @@ module OpsWalrus
   # these are dynamic package references defined at runtime when an OpsFile's imports are being evaluated.
   # this will usually be the case when an ops file does not belong to a package
   class DynamicPackageReference < PackageReference
+    def self.import_resolution_dirname(package_uri, version)
+      sanitized_package_uri = sanitize_path(package_uri)
+      sanitized_version = sanitize_path(version)
+      "pkg_#{sanitized_package_uri}_version_#{sanitized_version}"
+    end
     def import_resolution_dirname
-      "pkg_#{sanitized_package_uri}_version_#{version}"
+      DynamicPackageReference.import_resolution_dirname(@package_uri, @version)
     end
   end
 

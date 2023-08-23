@@ -184,13 +184,8 @@ module OpsWalrus
     end
 
     def dynamic_package_path_for_git_package(package_url, version = nil)
-      package_reference_dirname = sanitize_path(package_url)
+      package_reference_dirname = DynamicPackageReference.import_resolution_dirname(package_url, version)
       bundle_dir.join(package_reference_dirname)
-    end
-
-    def sanitize_path(path)
-      # found this at https://apidock.com/rails/v5.2.3/ActiveStorage/Filename/sanitized
-      path.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "ï¿½").strip.tr("\u{202E}%$|:;/\t\r\n\\", "-")
     end
 
     # returns the directory that the zip file is unzipped into
