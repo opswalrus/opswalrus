@@ -45,8 +45,8 @@ module OpsWalrus
   # this will usually be the case when an ops file does not belong to a package
   class DynamicPackageReference < PackageReference
     def self.import_resolution_dirname(package_uri, version)
-      sanitized_package_uri = sanitize_path(package_uri)
-      sanitized_version = sanitize_path(version)
+      sanitized_package_uri = sanitize_path(package_uri || raise(Error, "Unspecified package reference"))
+      sanitized_version = sanitize_path(version || "")
       "pkg_#{sanitized_package_uri}_version_#{sanitized_version}"
     end
     def self.sanitize_path(path)
