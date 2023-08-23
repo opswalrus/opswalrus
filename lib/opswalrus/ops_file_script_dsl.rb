@@ -264,6 +264,7 @@ module OpsWalrus
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
 
       description = desc_or_cmd if cmd || block
+      description = WalrusLang.render(description, block.binding) if description && block
       cmd = block.call if block
       cmd ||= desc_or_cmd
 

@@ -1,7 +1,7 @@
 require "citrus"
 require "io/console"
 require "json"
-require "logger"
+# require "logger"
 require "random/formatter"
 require "ougai"
 require "shellwords"
