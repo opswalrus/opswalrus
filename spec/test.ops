@@ -1,0 +1,12 @@
+params:
+  version: string
+
+imports:
+  core: "https://github.com/opswalrus/core.git"
+...
+
+version = params.version
+
+input = sh("read autoinput", input: {/enter something/ => "foo\n"}) { 'echo "enter something"; read bar; echo "you entered $bar"' }
+
+puts "input = #{input}"
