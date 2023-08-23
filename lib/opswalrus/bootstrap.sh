@@ -9,6 +9,7 @@ if [ -x "$(command -v /home/linuxbrew/.linuxbrew/bin/brew)" ]; then
     echo 'Ruby is already installed.' >&2
 
     # make sure the latest opswalrus gem is installed
+    # todo: figure out how to install this differently, so that test versions will work
     gem install opswalrus
 
     exit 0

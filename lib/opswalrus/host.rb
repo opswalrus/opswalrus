@@ -26,12 +26,12 @@ module OpsWalrus
             # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
             # therefore, we want to reference the specified ops file with respect to the bundle dir
             when PackageDependencyReference
-              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true, prompt_for_sudo_password: !!ssh_password)
 
             # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
             # the specified ops file with respect to the root directory, and not with respect to the bundle dir
             when DirectoryReference, OpsFileReference
-              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, prompt_for_sudo_password: !!ssh_password)
             end
 
             invocation_context._invoke(*args, **kwargs)
@@ -49,7 +49,7 @@ module OpsWalrus
         unless methods_defined.include? symbol_name
           # puts "2. defining: #{symbol_name}(...)"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false)
+            invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, prompt_for_sudo_password: !!ssh_password)
             invocation_context._invoke(*args, **kwargs)
           end
           methods_defined << symbol_name
@@ -107,13 +107,14 @@ module OpsWalrus
       #cmd = Shellwords.escape(cmd)
 
       if App.instance.report_mode?
+        puts Style.green("*" * 80)
         if self.alias
-          print "[#{self.alias} | #{host}] "
+          print "[#{Style.blue(self.alias)} | #{Style.blue(host)}] "
         else
-          print "[#{host}] "
+          print "[#{Style.blue(host)}] "
         end
         print "#{description}: " if description
-        puts cmd
+        puts Style.yellow(cmd)
       end
 
       return unless cmd && !cmd.strip.empty?
@@ -122,9 +123,12 @@ module OpsWalrus
       # puts "shell: #{cmd.inspect}"
       # puts "sudo_password: #{sudo_password}"
 
-      sshkit_cmd = execute_cmd(cmd, input: input)
-
-      [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+      if App.instance.dry_run?
+        ["", "", 0]
+      else
+        sshkit_cmd = execute_cmd(cmd, input: input)
+        [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+      end
     end
 
     # def init_brew
@@ -137,7 +141,13 @@ module OpsWalrus
       # e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops run echo.ops args:foo args:bar
 
       # cmd = "/home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
-      cmd = "/home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
+      local_hostname_for_remote_host = if self.alias
+        "#{self.alias} | #{host}"
+      else
+        host
+      end
+
+      cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
       cmd << " -v" if verbose
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options

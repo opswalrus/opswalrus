@@ -9,7 +9,7 @@ module OpsWalrus
 
     pre do |global_options, command, options, args|
       $app = App.instance(Dir.pwd)
-      $app.set_local_hostname(ENV["WALRUS_LOCAL_HOSTNAME"]) if ENV["WALRUS_LOCAL_HOSTNAME"]
+      $app.set_local_hostname(ENV["OPSWALRUS_LOCAL_HOSTNAME"]) if ENV["OPSWALRUS_LOCAL_HOSTNAME"]
       true
     end
 
@@ -31,6 +31,10 @@ module OpsWalrus
     desc 'Turn on debug mode'
     switch [:d, :debug]
 
+    switch :noop, desc: "Perform a dry run"
+    switch :dryrun, desc: "Perform a dry run"
+    switch :dry_run, desc: "Perform a dry run"
+
     flag [:h, :hosts], multiple: true, desc: "Specify the hosts.yaml file"
     flag [:t, :tags], multiple: true, desc: "Specify a set of tags to filter the hosts by"
 
@@ -48,7 +52,8 @@ module OpsWalrus
         hosts = global_options[:hosts]
         tags = global_options[:tags]
 
-        $app.set_verbose(global_options[:debug] || global_options[:verbose])
+        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+        $app.set_log_level(log_level)
 
         $app.report_inventory(hosts, tags: tags)
       end
@@ -63,27 +68,30 @@ module OpsWalrus
       c.flag [:p, :params], desc: "JSON string that represents the input parameters for the operation. The JSON string must conform to the params schema for the operation."
       c.switch :script, desc: "Script mode"
 
+      # dry run
+      c.switch :noop, desc: "Perform a dry run"
+      c.switch :dryrun, desc: "Perform a dry run"
+      c.switch :dry_run, desc: "Perform a dry run"
+
       c.action do |global_options, options, args|
+        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+        $app.set_log_level(log_level)
+
         hosts = global_options[:hosts] || []
         tags = global_options[:tags] || []
 
         $app.set_inventory_hosts(hosts)
         $app.set_inventory_tags(tags)
 
-        verbose = case
-        when global_options[:debug]
-          2
-        when global_options[:verbose]
-          1
-        end
-
         user = options[:user]
         params = options[:params]
 
-        $app.set_verbose(verbose)
         $app.set_params(params)
 
         $app.set_sudo_user(user) if user
+
+        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        $app.dry_run! if dry_run
 
         if options[:pass]
           $app.prompt_sudo_password
@@ -107,6 +115,9 @@ module OpsWalrus
       long_desc 'Download and bundle the latest versions of dependencies for the current package'
       c.command :update do |update|
         update.action do |global_options, options, args|
+          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+          $app.set_log_level(log_level)
+
           $app.bundle_update
         end
       end
@@ -125,6 +136,9 @@ module OpsWalrus
         unzip.flag [:o, :output], desc: "Specify the output directory"
 
         unzip.action do |global_options, options, args|
+          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+          $app.set_log_level(log_level)
+
           output_dir = options[:output]
           zip_file_path = args.first
 

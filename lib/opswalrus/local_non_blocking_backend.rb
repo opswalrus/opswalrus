@@ -112,7 +112,6 @@ module SSHKit
         buffer || ""
       end
 
-
       def handle_data_for_stderr(output, cmd, buffer, stdin, is_blocked)
         # we're blocked on reading, so let's process the buffer
         lines, buffer = split_buffer(buffer)

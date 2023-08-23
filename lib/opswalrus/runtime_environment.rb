@@ -90,7 +90,7 @@ module OpsWalrus
       str = "Namespace: #{@dirname.to_s}\n"
       @symbol_table.each do |k, v|
         if v.is_a? Namespace
-          str << "#{'  ' * (indent)}|- #{k} : #{v.to_s(indent + 1)}\n"
+          str << "#{'  ' * (indent)}|- #{k} : #{v.to_s(indent + 1)}"
         else
           str << "#{'  ' * (indent)}|- #{k} : #{v.to_s}\n"
         end
@@ -106,31 +106,6 @@ module OpsWalrus
       @symbol_table[symbol_name.to_s]
     end
 
-    # # if this namespace contains an OpsFile of the same name as the namespace, e.g. pkg/install/install.ops, then this
-    # # method invokes the OpsFile of that same name and returns the result;
-    # # otherwise we return this namespace object
-    # def _invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs, &block)
-    #   resolved_symbol = resolve_symbol(@dirname.basename)
-    #   if resolved_symbol.is_a? OpsFile
-    #     params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
-    #     resolved_symbol.invoke(runtime_env, params_hash)
-    #   else
-    #     self
-    #   end
-    # end
-
-    # def method_missing(name, *args, **kwargs, &block)
-    #   # puts "method_missing: #{name}"
-    #   # puts caller
-    #   resolved_symbol = resolve_symbol(name)
-    #   case resolved_symbol
-    #   when Namespace
-    #     resolved_symbol._invoke_if_namespace_has_ops_file_of_same_name(*args, **kwargs)
-    #   when OpsFile
-    #     params_hash = resolved_symbol.build_params_hash(*args, **kwargs)
-    #     resolved_symbol.invoke(runtime_env, params_hash)
-    #   end
-    # end
   end
 
   # the assumption is that we have a bundle directory with all the packages in it
@@ -147,16 +122,13 @@ module OpsWalrus
       @root_namespace = build_symbol_resolution_tree(@dir)
       @path_map = build_path_map(@root_namespace)
 
-      # puts "*" * 80
-      # puts "load path for #{@dir}"
-      # puts "-" * 80
-      # puts 'root namespace'
-      # puts @root_namespace.to_s
-      # puts "-" * 80
-      # puts 'path map'
-      # @path_map.each do |k,v|
-      #   puts "#{k.to_s}: #{v.to_s}"
-      # end
+      App.instance.trace "LoadPath for #{@dir} ************************************************************"
+      App.instance.trace 'root namespace ******************************************************************'
+      App.instance.trace @root_namespace.to_s
+      App.instance.trace 'path map ************************************************************************'
+      @path_map.each do |k,v|
+        App.instance.trace "#{k.to_s}: #{v.to_s}"
+      end
 
       @dynamic_package_additions_memo = {}
     end
@@ -268,9 +240,16 @@ module OpsWalrus
       @bundle_load_path = LoadPath.new(self, @app.bundle_dir)
       @app_load_path = LoadPath.new(self, @app.pwd)
 
-      @interaction_handler = ScopedMappingInteractionHandler.new({
-        /\[sudo\] password for .*?:\s*/ => "#{sudo_password}\n",
-      })
+      # we include this sudo password mapping by default because if a bundled script is being run on a remote host,
+      # then the remote command invocation will include the --pass flag when being run on the remote host, which will
+      # interactively prompt for a sudo password, and that will be the only opportunity for the command host
+      # that is running the bundled script on the remote host to interactively enter a sudo password for the remote context
+      # since the remote ops command will be running within a PTY, and the interactive prompts running on the remote
+      # host will be managed by the local ScopedMappingInteractionHandler running within the instance of the ops command
+      # process on the remote host, and the command host will not have any further opportunity to interactively enter
+      # any prompts on the remote host
+      interaction_handler_mapping_for_sudo_password = ScopedMappingInteractionHandler.mapping_for_sudo_password(sudo_password)
+      @interaction_handler = ScopedMappingInteractionHandler.new(interaction_handler_mapping_for_sudo_password)
 
       configure_sshkit
     end
@@ -291,6 +270,7 @@ module OpsWalrus
         # SSHKit.config.use_format :simpletext
         SSHKit.config.output_verbosity = :debug
       elsif app.verbose?
+        SSHKit.config.use_format :pretty
         # SSHKit.config.use_format :dot
         SSHKit.config.output_verbosity = :info
       end
@@ -344,8 +324,8 @@ module OpsWalrus
       end.run
     end
 
-    def invoke(ops_file, params_hash)
-      ops_file.invoke(self, params_hash)
+    def invoke(ops_file, hashlike_params)
+      ops_file.invoke(self, hashlike_params)
     end
 
     def find_load_path_that_includes_path(path)

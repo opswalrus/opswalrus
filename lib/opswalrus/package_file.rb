@@ -34,7 +34,7 @@ module OpsWalrus
     # change in order for the three things to reconcile with respect to one another, since all three bits of logic are
     # what make bundling package dependencies and loading them function properly.
     def import_resolution_dirname
-      local_name
+      "pkg_#{local_name}_version_#{version}"
     end
 
     def to_s
@@ -54,7 +54,7 @@ module OpsWalrus
   # this will usually be the case when an ops file does not belong to a package
   class DynamicPackageReference < PackageReference
     def import_resolution_dirname
-      sanitized_package_uri
+      "pkg_#{sanitized_package_uri}_version_#{version}"
     end
   end
 

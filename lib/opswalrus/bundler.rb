@@ -26,6 +26,10 @@ module OpsWalrus
       FileUtils.mkdir_p(@bundle_dir) unless @bundle_dir.exist?
     end
 
+    def delete_pwd_bundle_directory
+      FileUtils.remove_dir(@bundle_dir) if @bundle_dir.exist?
+    end
+
     # # returns the OpsFile within the bundle directory that represents the given ops_file (which is outside of the bundle directory)
     # def build_bundle_for_ops_file(ops_file)
     #   if ops_file.package_file   # ops_file is part of larger package
@@ -50,6 +54,7 @@ module OpsWalrus
     # end
 
     def update
+      delete_pwd_bundle_directory
       ensure_pwd_bundle_directory_exists
 
       package_yaml_files = pwd.glob("./**/package.yaml") - pwd.glob("./**/#{BUNDLE_DIR}/**/package.yaml")
@@ -110,36 +115,16 @@ module OpsWalrus
       version = package_reference.version
 
       destination_package_path = @bundle_dir.join(package_reference.import_resolution_dirname)
-      FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
+
+      # we return early here under the assumption that an already downloaded package/version combo will not
+      # differ if we download it again multiple times to the same location
+      if destination_package_path.exist?
+        App.instance.log("Skipping #{package_reference} referenced in #{package_file.package_file_path} since it already has been downloaded to #{destination_package_path}")
+        return destination_package_path
+      end
+      # FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
 
       download_package_contents(package_file, local_name, package_url, version, destination_package_path)
-      # case
-      # when package_url =~ /\.git/                               # git reference
-      #   download_git_package(package_url, version, destination_package_path)
-      # when package_url.start_with?("file://")                   # local path
-      #   path = package_url.sub("file://", "")
-      #   path = path.to_pathname
-      #   package_path_to_download = if path.relative?            # relative path
-      #     package_file.containing_directory.join(path)
-      #   else                                                    # absolute path
-      #     path.realpath
-      #   end
-
-      #   raise Error, "Package not found: #{package_path_to_download}" unless package_path_to_download.exist?
-      #   FileUtils.cp_r(package_path_to_download, destination_package_path)
-      # when package_url.to_pathname.exist? || package_file.containing_directory.join(package_url).exist?     # local path
-      #   path = package_url.to_pathname
-      #   package_path_to_download = if path.relative?            # relative path
-      #     package_file.containing_directory.join(path)
-      #   else                                                    # absolute path
-      #     path.realpath
-      #   end
-
-      #   raise Error, "Package not found: #{package_path_to_download}" unless File.exist?(package_path_to_download)
-      #   FileUtils.cp_r(package_path_to_download, destination_package_path)
-      # else                                                      # git reference
-      #   download_git_package(package_url, version, destination_package_path)
-      # end
 
       destination_package_path
     end
@@ -147,10 +132,12 @@ module OpsWalrus
     def download_package_contents(package_file, local_name, package_url, version, destination_package_path)
       package_path = package_url.to_pathname
       package_path = package_path.to_s.gsub(/^~/, Dir.home).to_pathname
+      App.instance.trace("download_package_contents #{package_path}")
       if package_path.absolute? && package_path.exist?                                   # absolute path reference
         return case
         when package_path.directory?
           package_path_to_download = package_path.realpath
+          App.instance.debug("Copying #{package_path_to_download} to #{destination_package_path}")
           FileUtils.cp_r(package_path_to_download, destination_package_path)
         when package_path.file?
           raise Error, "Package reference must be a directory, not a file:: #{local_name}: #{package_path}"
@@ -163,6 +150,7 @@ module OpsWalrus
         if rebased_path.exist?
           return case
           when rebased_path.directory?
+            App.instance.debug("Copying #{package_path_to_download} to #{destination_package_path}")
             package_path_to_download = rebased_path.realpath
             FileUtils.cp_r(package_path_to_download, destination_package_path)
           when rebased_path.file?
@@ -174,6 +162,7 @@ module OpsWalrus
       end
 
       if package_uri = Git.repo?(package_url)                                                          # git repo
+        App.instance.debug("Cloning repo #{package_uri} into #{destination_package_path}")
         download_git_package(package_uri, version, destination_package_path)
       end
     end

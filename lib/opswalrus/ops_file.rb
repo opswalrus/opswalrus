@@ -173,8 +173,9 @@ module OpsWalrus
       raise Error, "Unknown import reference: #{local_name}: #{import_str.inspect}"
     end
 
-    def invoke(runtime_env, params_hash)
-      script._invoke(runtime_env, params_hash)
+    def invoke(runtime_env, hashlike_params)
+      # this invokes the dynamically generated _invoke method that is defined at runtime within OpsFileScript.define_for(...)
+      script._invoke(runtime_env, hashlike_params)
     end
 
     def build_params_hash(*args, **kwargs)

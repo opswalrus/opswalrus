@@ -9,8 +9,10 @@ PATH
       git (~> 1.18)
       gli (~> 2.21)
       ougai (~> 2.0)
+      pastel (~> 0.8)
       rubyzip (~> 2.3)
       sshkit (~> 1.21)
+      tty-editor (~> 0.7)
 
 GEM
   remote: https://rubygems.org/
@@ -32,6 +34,8 @@ GEM
     oj (3.16.0)
     ougai (2.0.0)
       oj (~> 3.10)
+    pastel (0.8.0)
+      tty-color (~> 0.5)
     public_suffix (5.0.3)
     rake (13.0.6)
     rchardet (1.8.0)
@@ -52,6 +56,19 @@ GEM
     sshkit (1.21.5)
       net-scp (>= 1.1.2)
       net-ssh (>= 2.8.0)
+    tty-color (0.6.0)
+    tty-cursor (0.7.1)
+    tty-editor (0.7.0)
+      tty-prompt (~> 0.22)
+    tty-prompt (0.23.1)
+      pastel (~> 0.8)
+      tty-reader (~> 0.8)
+    tty-reader (0.9.0)
+      tty-cursor (~> 0.7)
+      tty-screen (~> 0.8)
+      wisper (~> 2.0)
+    tty-screen (0.8.1)
+    wisper (2.0.1)
 
 PLATFORMS
   x86_64-linux

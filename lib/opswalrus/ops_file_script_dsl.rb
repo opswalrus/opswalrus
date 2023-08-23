@@ -12,67 +12,6 @@ require_relative 'walrus_lang'
 
 module OpsWalrus
 
-  class ArrayOrHashNavigationProxy
-    def initialize(array_or_hash)
-      @obj = array_or_hash
-    end
-    def [](index, *args, **kwargs, &block)
-      @obj.method(:[]).call(index, *args, **kwargs, &block)
-    end
-    def respond_to_missing?(method, *)
-      @obj.is_a?(Hash) && @obj.respond_to?(method)
-    end
-    def method_missing(name, *args, **kwargs, &block)
-      case @obj
-      when Array
-        @obj.method(name).call(*args, **kwargs, &block)
-      when Hash
-        if @obj.respond_to?(name)
-          @obj.method(name).call(*args, **kwargs, &block)
-        else
-          value = self[name.to_s]
-          case value
-          when Array, Hash
-            ArrayOrHashNavigationProxy.new(value)
-          else
-            value
-          end
-        end
-      end
-    end
-  end
-
-  class InvocationParams
-    # params : Hash
-    def initialize(params)
-      @params = params
-    end
-
-    def [](key)
-      key = key.to_s if key.is_a? Symbol
-      @params[key]
-    end
-
-    def dig(*keys)
-      # keys = keys.map {|key| key.is_a?(Integer) ? key : key.to_s }
-      @params.dig(*keys)
-    end
-
-    def method_missing(name, *args, **kwargs, &block)
-      if @params.respond_to?(name)
-        @params.method(name).call(*args, **kwargs, &block)
-      else
-        value = self[name]
-        case value
-        when Array, Hash
-          ArrayOrHashNavigationProxy.new(value)
-        else
-          value
-        end
-      end
-    end
-  end
-
   module Invocation
     class Result
       attr_accessor :value
@@ -157,7 +96,7 @@ module OpsWalrus
 
           # puts retval.inspect
 
-          # cleanup
+          # todo: cleanup
           # if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
           #   host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip", tmp_bundle_root_dir)
           # else
@@ -275,19 +214,23 @@ module OpsWalrus
       # puts "shell! self: #{self.inspect}"
 
       if App.instance.report_mode?
-        print "[#{@runtime_env.local_hostname}] "
+        puts Style.green("*" * 80)
+        print "[#{Style.blue(@runtime_env.local_hostname)}] "
         print "#{description}: " if description
-        puts cmd
+        puts Style.yellow(cmd)
       end
 
       return unless cmd && !cmd.strip.empty?
 
-      sshkit_cmd = @runtime_env.handle_input(input) do |interaction_handler|
-        # self is a Module instance that is serving as the evaluation context in an instance of a subclass of an Invocation; see Invocation#evaluate
-        backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: :info)
+      if App.instance.dry_run?
+        ["", "", 0]
+      else
+        sshkit_cmd = @runtime_env.handle_input(input) do |interaction_handler|
+          # self is a Module instance that is serving as the evaluation context in an instance of a subclass of an Invocation; see Invocation#evaluate
+          backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: :info)
+        end
+        [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
       end
-
-      [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
     end
 
     # def init_brew

@@ -1,8 +1,79 @@
+require 'forwardable'
 require 'set'
 require_relative 'invocation'
 require_relative 'ops_file_script_dsl'
 
 module OpsWalrus
+
+  class ArrayOrHashNavigationProxy
+    extend Forwardable
+
+    def initialize(array_or_hash)
+      @obj = array_or_hash
+    end
+
+    def_delegators :@obj, :to_s, :inspect, :hash, :===, :eql?, :kind_of?, :is_a?, :instance_of?, :respond_to?, :<=>
+
+    def [](index, *args, **kwargs, &block)
+      @obj.method(:[]).call(index, *args, **kwargs, &block)
+    end
+    def respond_to_missing?(method, *)
+      @obj.is_a?(Hash) && @obj.respond_to?(method)
+    end
+    def method_missing(name, *args, **kwargs, &block)
+      case @obj
+      when Array
+        @obj.method(name).call(*args, **kwargs, &block)
+      when Hash
+        if @obj.respond_to?(name)
+          @obj.method(name).call(*args, **kwargs, &block)
+        else
+          value = self[name.to_s]
+          case value
+          when Array, Hash
+            ArrayOrHashNavigationProxy.new(value)
+          else
+            value
+          end
+        end
+      end
+    end
+  end
+
+  class InvocationParams
+    # @params : Hash
+
+    # params : Hash | ArrayOrHashNavigationProxy
+    def initialize(hashlike_params)
+      # this doesn't seem to make any difference
+      @params = hashlike_params.to_h
+      # @params = hashlike_params
+    end
+
+    def [](key)
+      key = key.to_s if key.is_a? Symbol
+      @params[key]
+    end
+
+    def dig(*keys)
+      # keys = keys.map {|key| key.is_a?(Integer) ? key : key.to_s }
+      @params.dig(*keys)
+    end
+
+    def method_missing(name, *args, **kwargs, &block)
+      if @params.respond_to?(name)
+        @params.method(name).call(*args, **kwargs, &block)
+      else
+        value = self[name]
+        case value
+        when Array, Hash
+          ArrayOrHashNavigationProxy.new(value)
+        else
+          value
+        end
+      end
+    end
+  end
 
   class OpsFileScript
 
@@ -14,11 +85,11 @@ module OpsWalrus
       # define methods for the OpsFile's local_symbol_table: local imports and private lib directory
       ops_file.local_symbol_table.each do |symbol_name, import_reference|
         unless methods_defined.include? symbol_name
-          App.instance.debug "defining method for local symbol table entry: #{symbol_name}"
+          App.instance.trace "defining method for local symbol table entry: #{symbol_name}"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            App.instance.debug "resolving local symbol table entry: #{symbol_name}"
+            App.instance.trace "resolving local symbol table entry: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
-            App.instance.debug "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+            App.instance.trace "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
             invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
             invocation_context._invoke(*args, **kwargs)
@@ -33,14 +104,14 @@ module OpsWalrus
       sibling_symbol_table_names |= ops_file.dirname.glob("*.ops").map {|ops_file_path| ops_file_path.basename(".ops").to_s }   # OpsFiles
       sibling_symbol_table_names |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
       # puts "sibling_symbol_table_names=#{sibling_symbol_table_names}"
-      App.instance.debug "methods_defined=#{methods_defined}"
+      App.instance.trace "methods_defined=#{methods_defined}"
       sibling_symbol_table_names.each do |symbol_name|
         unless methods_defined.include? symbol_name
-          App.instance.debug "defining method for implicit imports: #{symbol_name}"
+          App.instance.trace "defining method for implicit imports: #{symbol_name}"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            App.instance.debug "resolving implicit import: #{symbol_name}"
+            App.instance.trace "resolving implicit import: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
-            App.instance.debug "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+            App.instance.trace "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
             invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
             invocation_context._invoke(*args, **kwargs)
@@ -60,9 +131,9 @@ module OpsWalrus
       # - #verbose?
       # - all the dynamically defined methods in the subclass of Invocation
       invoke_method_definition = <<~INVOKE_METHOD
-        def _invoke(runtime_env, params_hash)
+        def _invoke(runtime_env, hashlike_params)
           @runtime_env = runtime_env
-          @params = InvocationParams.new(params_hash)
+          @params = InvocationParams.new(hashlike_params)
           #{ruby_script}
         end
       INVOKE_METHOD
@@ -101,7 +172,7 @@ module OpsWalrus
     end
 
     # The _invoke method is dynamically defined as part of OpsFileScript.define_for
-    def _invoke(runtime_env, params_hash)
+    def _invoke(runtime_env, hashlike_params)
       raise "Not implemented in base class."
     end
 

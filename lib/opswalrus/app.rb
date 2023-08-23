@@ -4,11 +4,12 @@ require "json"
 # require "logger"
 require "random/formatter"
 require "ougai"
+require "pastel"
+require "pathname"
 require "shellwords"
 require "socket"
 require "stringio"
 require "yaml"
-require "pathname"
 require_relative "errors"
 require_relative "patches"
 require_relative "git"
@@ -21,6 +22,8 @@ require_relative "version"
 
 
 module OpsWalrus
+  Style = Pastel.new(enabled: $stdout.tty?)
+
   class App
     def self.instance(*args)
       @instance ||= new(*args)
@@ -32,9 +35,14 @@ module OpsWalrus
     attr_reader :local_hostname
 
     def initialize(pwd = Dir.pwd)
-      @logger = Ougai::Logger.new($stdout, level: Logger::INFO)    # Logger.new($stdout, level: Logger::INFO)
+      @logger = Ougai::Logger.new($stdout)    # Logger.new($stdout, level: Logger::INFO)
+      @logger.level = :info    # , :trace or 'trace'
       @logger.formatter = Ougai::Formatters::Readable.new
 
+      # @logger.warn Style.yellow("warn"), foo: "bar", baz: {qux: "quux"}
+      # @logger.info Style.yellow("info"), foo: "bar", baz: {qux: "quux"}
+      # @logger.debug Style.yellow("debug"), foo: "bar", baz: {qux: "quux"}
+      # @logger.trace Style.yellow("trace"), foo: "bar", baz: {qux: "quux"}
 
       @verbose = false
       @sudo_user = nil
@@ -46,6 +54,7 @@ module OpsWalrus
       @bundler = Bundler.new(@pwd)
       @local_hostname = "localhost"
       @mode = :report     # :report | :script
+      @dry_run = false
     end
 
     def to_s
@@ -66,6 +75,14 @@ module OpsWalrus
 
     def script_mode?
       @mode == :script
+    end
+
+    def dry_run?
+      @dry_run
+    end
+
+    def dry_run!
+      @dry_run = true
     end
 
     def set_local_hostname(hostname)
@@ -91,37 +108,54 @@ module OpsWalrus
       @bundler.bundle_dir
     end
 
-    def set_verbose(verbose)
-      @verbose = verbose
-      @logger.debug! if verbose?
+    # log_level = :fatal, :error, :warn, :info, :debug, :trace
+    # irb(main):018:0> Ougai::Logger::TRACE
+    # => -1
+    # irb(main):019:0> Ougai::Logger::DEBUG
+    # => 0
+    # irb(main):020:0> Ougai::Logger::INFO
+    # => 1
+    # irb(main):021:0> Ougai::Logger::WARN
+    # => 2
+    # irb(main):022:0> Ougai::Logger::ERROR
+    # => 3
+    # irb(main):023:0> Ougai::Logger::FATAL
+    # => 4
+    def set_log_level(log_level)
+      @logger.level = log_level
     end
 
     def verbose?
-      @verbose
+      @logger.level <= 1
     end
 
     def debug?
-      @verbose == 2
+      @logger.level <= 0
     end
 
-    def error(msg)
-      @logger.error(msg)
+    def fatal(*args)
+      @logger.fatal(*args)
     end
 
-    def warn(msg)
-      @logger.warn(msg)
+    def error(*args)
+      @logger.error(*args)
     end
 
-    def log(msg)
-      @logger.info(msg)
+    def warn(*args)
+      @logger.warn(*args)
     end
 
-    def debug(msg)
-      @logger.debug(msg)
+    def log(*args)
+      @logger.info(*args)
+    end
+    alias_method :info, :log
+
+    def debug(*args)
+      @logger.debug(*args)
     end
 
-    def trace(msg)
-      @logger.trace(msg)
+    def trace(*args)
+      @logger.trace(*args)
     end
 
     def set_pwd(pwd)
