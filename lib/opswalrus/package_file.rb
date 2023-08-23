@@ -15,11 +15,6 @@ module OpsWalrus
       @local_name, @package_uri, @version = local_name, package_uri, version
     end
 
-    def sanitize_path(path)
-      # found this at https://apidock.com/rails/v5.2.3/ActiveStorage/Filename/sanitized
-      path.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "ï¿½").strip.tr("\u{202E}%$|:;/\t\r\n\\", "-")
-    end
-
     # important: the import_resolution_dirname implemented as the local_name is critical because Bundler#download_package downloads
     # package dependencies to the name that this method returns, which must match the package reference's local name
     # so that later, when the package is being looked up on the load path (in LoadPath#resolve_import_reference),
@@ -53,6 +48,10 @@ module OpsWalrus
       sanitized_package_uri = sanitize_path(package_uri)
       sanitized_version = sanitize_path(version)
       "pkg_#{sanitized_package_uri}_version_#{sanitized_version}"
+    end
+    def self.sanitize_path(path)
+      # found this at https://apidock.com/rails/v5.2.3/ActiveStorage/Filename/sanitized
+      path.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "ï¿½").strip.tr("\u{202E}%$|:;/\t\r\n\\", "-")
     end
     def import_resolution_dirname
       DynamicPackageReference.import_resolution_dirname(@package_uri, @version)
