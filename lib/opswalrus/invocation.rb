@@ -30,7 +30,12 @@ module OpsWalrus
       @initial_namespace_or_ops_file = @namespace_or_ops_file = namespace_or_ops_file
       @is_invocation_a_call_to_package_in_bundle_dir = is_invocation_a_call_to_package_in_bundle_dir
 
-      initial_method_name = @namespace_or_ops_file.dirname.basename
+      initial_method_name = case @namespace_or_ops_file
+      when Namespace
+        @namespace_or_ops_file.dirname.basename
+      when OpsFile
+        @namespace_or_ops_file.basename
+      end
       @method_chain = [initial_method_name]
       @prompt_for_sudo_password = prompt_for_sudo_password
     end

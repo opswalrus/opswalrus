@@ -173,7 +173,11 @@ module OpsWalrus
       raise Error, "Unknown package reference: #{local_package_name}" unless package_reference
       import_reference = PackageDependencyReference.new(local_package_name, package_reference)
       # puts "import: #{import_reference.inspect}"
-      @runtime_env.resolve_import_reference(ops_file, import_reference)
+      namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
+      raise SymbolResolutionError, "Import reference '#{import_reference.summary}' not in load path for #{ops_file.ops_file_path}" unless namespace_or_ops_file
+      invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
+      # invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
+      # invocation_context._invoke(*args, **kwargs)
     end
 
     def params(*keys, default: nil)
