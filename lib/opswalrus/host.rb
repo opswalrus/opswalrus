@@ -18,9 +18,9 @@ module OpsWalrus
       ops_file.local_symbol_table.each do |symbol_name, import_reference|
         unless methods_defined.include? symbol_name
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
-            # puts "resolving local symbol table entry: #{symbol_name}"
+            App.instance.trace "resolving local symbol table entry: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
-            # puts "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+            App.instance.trace "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
             invocation_context = case import_reference
             # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
@@ -49,6 +49,10 @@ module OpsWalrus
         unless methods_defined.include? symbol_name
           # puts "2. defining: #{symbol_name}(...)"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
+            App.instance.trace "resolving implicit import: #{symbol_name}"
+            namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
+            App.instance.trace "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
+
             invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, prompt_for_sudo_password: !!ssh_password)
             invocation_context._invoke(*args, **kwargs)
           end

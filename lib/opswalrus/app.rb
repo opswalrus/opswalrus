@@ -1,3 +1,4 @@
+require "amazing_print"
 require "citrus"
 require "io/console"
 require "json"

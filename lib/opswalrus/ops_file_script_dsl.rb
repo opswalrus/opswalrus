@@ -126,7 +126,7 @@ module OpsWalrus
         rescue => e
           puts e.class
           puts e.message
-          # puts e.backtrace.join("\n")
+          puts e.backtrace.join("\n")
         ensure
           host.clear_ssh_session
         end
