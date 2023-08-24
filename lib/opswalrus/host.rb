@@ -89,7 +89,7 @@ module OpsWalrus
       @_host.execute(:rm, "-f", "tmpopsbootstrap.sh")
     end
 
-    def zip_copy_and_run_ops_bundle(local_host, block)
+    def _zip_copy_and_run_ops_bundle(local_host, block)
       # copy over ops bundle zip file
       zip_bundle_path = @runtime_env.zip_bundle_path
       upload_success = @_host.upload(zip_bundle_path, "tmpops.zip")
