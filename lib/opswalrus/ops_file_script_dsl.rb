@@ -52,6 +52,55 @@ module OpsWalrus
   # SCRIPT
 
   module OpsFileScriptDSL
+    def ssh_noprep(*args, **kwargs, &block)
+      runtime_env = @runtime_env
+
+      hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(runtime_env, host) }
+      sshkit_hosts = hosts.map(&:sshkit_host)
+      sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
+      local_host = self
+      # on sshkit_hosts do |sshkit_host|
+      SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
+        # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
+        host = sshkit_host_to_ops_host_map[sshkit_host]
+
+        begin
+          host.set_runtime_env(runtime_env)
+          host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
+
+          # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
+          retval = host.instance_exec(local_host, &block)    # local_host is passed as the argument to the block
+
+          retval
+        rescue SSHKit::Command::Failed => e
+          puts "[!] Command failed:"
+          puts e.message
+        rescue Net::SSH::ConnectionTimeout
+          puts "[!] The host '#{host}' not alive!"
+        rescue Net::SSH::Timeout
+          puts "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
+        rescue Errno::ECONNREFUSED
+          puts "[!] Incorrect port #{port} for #{host}"
+        rescue Net::SSH::HostKeyMismatch => e
+          puts "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
+          puts e.message
+          puts "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
+        rescue Net::SSH::AuthenticationFailed
+          puts "Wrong Password: #{host} | #{user}:#{password}"
+        rescue Net::SSH::Authentication::DisallowedMethod
+          puts "[!] The host '#{host}' doesn't accept password authentication method."
+        rescue Errno::EHOSTUNREACH => e
+          puts "[!] The host '#{host}' is unreachable"
+        rescue => e
+          puts e.class
+          puts e.message
+          puts e.backtrace.join("\n")
+        ensure
+          host.clear_ssh_session
+        end
+      end
+    end
+
     def ssh(*args, **kwargs, &block)
       runtime_env = @runtime_env
 
@@ -62,18 +111,15 @@ module OpsWalrus
       # bootstrap_shell_script = BootstrapLinuxHostShellScript
       # on sshkit_hosts do |sshkit_host|
       SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
-
         # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
-
         host = sshkit_host_to_ops_host_map[sshkit_host]
-        # puts "#{host.alias} / #{host}:"
 
         begin
           host.set_runtime_env(runtime_env)
           host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
 
-          host.bootstrap
-          host.zip_copy_and_run_ops_bundle(local_host, block)
+          host._bootstrap_host
+          retval = host._zip_copy_and_run_ops_bundle(local_host, block)
 
           retval
         rescue SSHKit::Command::Failed => e

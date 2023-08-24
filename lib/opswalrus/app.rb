@@ -189,6 +189,7 @@ module OpsWalrus
     end
 
     def bootstrap()
+      set_pwd(__FILE__.to_pathname.dirname)
       bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("bootstrap.ops"))
       op = OperationRunner.new(self, bootstrap_ops_file)
       result = op.run([], params_json_hash: @params)
