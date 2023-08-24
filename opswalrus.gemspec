@@ -36,9 +36,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "citrus", "~> 3.0"
   spec.add_dependency "gli", "~> 2.21"
   spec.add_dependency "git", "~> 1.18"
-  spec.add_dependency "ougai", "~> 2.0"
   spec.add_dependency "pastel", "~> 0.8"
   spec.add_dependency "rubyzip", "~> 2.3"
+  spec.add_dependency "semantic_logger", "~> 4.13"
   spec.add_dependency "tty-editor", "~> 0.7"
 
   spec.add_dependency "bcrypt_pbkdf", "~> 1.1"

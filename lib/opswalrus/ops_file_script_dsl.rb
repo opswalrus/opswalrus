@@ -72,36 +72,8 @@ module OpsWalrus
           host.set_runtime_env(runtime_env)
           host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
 
-          # copy over bootstrap shell script
-          # io = StringIO.new(bootstrap_shell_script)
-          io = File.open(__FILE__.to_pathname.dirname.join("bootstrap.sh"))
-          upload_success = host.upload(io, "tmpopsbootstrap.sh")
-          io.close
-          raise Error, "Unable to upload bootstrap shell script to remote host" unless upload_success
-          host.execute(:chmod, "755", "tmpopsbootstrap.sh")
-          host.execute(:sh, "tmpopsbootstrap.sh")
-
-          # copy over ops bundle zip file
-          zip_bundle_path = runtime_env.zip_bundle_path
-          upload_success = host.upload(zip_bundle_path, "tmpops.zip")
-          raise Error, "Unable to upload ops bundle to remote host" unless upload_success
-
-          stdout, stderr, exit_status = host.run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
-          raise Error, "Unable to unzip ops bundle on remote host" unless exit_status == 0
-          tmp_bundle_root_dir = stdout.strip
-          host.set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
-
-          # we run the block in the context of the host, s.t. `self` within the block evaluates to `host`
-          retval = host.instance_exec(local_host, &block)    # host is passed as the argument to the block
-
-          # puts retval.inspect
-
-          # todo: cleanup
-          # if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
-          #   host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip", tmp_bundle_root_dir)
-          # else
-          #   host.execute(:rm, "-rf", "tmpopsbootstrap.sh", "tmpops.zip")
-          # end
+          host.bootstrap
+          host.zip_copy_and_run_ops_bundle(local_host, block)
 
           retval
         rescue SSHKit::Command::Failed => e

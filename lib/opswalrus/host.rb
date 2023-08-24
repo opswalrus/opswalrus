@@ -77,6 +77,42 @@ module OpsWalrus
       @_host.to_s
     end
 
+    def bootstrap
+      # copy over bootstrap shell script
+      # io = StringIO.new(bootstrap_shell_script)
+      io = File.open(__FILE__.to_pathname.dirname.join("bootstrap.sh"))
+      upload_success = upload(io, "tmpopsbootstrap.sh")
+      io.close
+      raise Error, "Unable to upload bootstrap shell script to remote host #{to_s} (alias=#{self.alias})" unless upload_success
+      execute(:chmod, "755", "tmpopsbootstrap.sh")
+      execute(:sh, "tmpopsbootstrap.sh")
+      execute(:rm, "-f", "tmpopsbootstrap.sh")
+    end
+
+    def zip_copy_and_run_ops_bundle(local_host, block)
+      # copy over ops bundle zip file
+      zip_bundle_path = @runtime_env.zip_bundle_path
+      upload_success = upload(zip_bundle_path, "tmpops.zip")
+      raise Error, "Unable to upload ops bundle to remote host" unless upload_success
+
+      stdout, _stderr, exit_status = run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
+      raise Error, "Unable to unzip ops bundle on remote host" unless exit_status == 0
+      tmp_bundle_root_dir = stdout.strip
+      set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
+
+      # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
+      retval = instance_exec(local_host, &block)    # local_host is passed as the argument to the block
+
+      # todo: cleanup
+      if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
+        host.execute(:rm, "-rf", "tmpops.zip", tmp_bundle_root_dir)
+      else
+        host.execute(:rm, "-rf", "tmpops.zip")
+      end
+
+      retval
+    end
+
     def method_missing(name, ...)
       @_host.send(name, ...)
     end

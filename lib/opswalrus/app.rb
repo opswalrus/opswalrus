@@ -1,12 +1,11 @@
-require "amazing_print"
 require "citrus"
 require "io/console"
 require "json"
 # require "logger"
 require "random/formatter"
-require "ougai"
 require "pastel"
 require "pathname"
+require "semantic_logger"
 require "shellwords"
 require "socket"
 require "stringio"
@@ -36,9 +35,11 @@ module OpsWalrus
     attr_reader :local_hostname
 
     def initialize(pwd = Dir.pwd)
-      @logger = Ougai::Logger.new($stdout)    # Logger.new($stdout, level: Logger::INFO)
+      SemanticLogger.default_level = :info
+      # SemanticLogger.add_appender(file_name: 'development.log', formatter: :color)   # Log to a file, and use the colorized formatter
+      SemanticLogger.add_appender(io: $stdout, formatter: :color)       # Log errors and above to standard error:
+      @logger = SemanticLogger[OpsWalrus]    # Logger.new($stdout, level: Logger::INFO)
       @logger.level = :info    # , :trace or 'trace'
-      @logger.formatter = Ougai::Formatters::Readable.new
 
       # @logger.warn Style.yellow("warn"), foo: "bar", baz: {qux: "quux"}
       # @logger.info Style.yellow("info"), foo: "bar", baz: {qux: "quux"}
@@ -110,28 +111,16 @@ module OpsWalrus
     end
 
     # log_level = :fatal, :error, :warn, :info, :debug, :trace
-    # irb(main):018:0> Ougai::Logger::TRACE
-    # => -1
-    # irb(main):019:0> Ougai::Logger::DEBUG
-    # => 0
-    # irb(main):020:0> Ougai::Logger::INFO
-    # => 1
-    # irb(main):021:0> Ougai::Logger::WARN
-    # => 2
-    # irb(main):022:0> Ougai::Logger::ERROR
-    # => 3
-    # irb(main):023:0> Ougai::Logger::FATAL
-    # => 4
     def set_log_level(log_level)
       @logger.level = log_level
     end
 
     def verbose?
-      @logger.level <= 1
+      [:info, :debug, :trace].include? @logger.level
     end
 
     def debug?
-      @logger.level <= 0
+      [:debug, :trace].include? @logger.level
     end
 
     def fatal(*args)
@@ -197,6 +186,14 @@ module OpsWalrus
       json_hash = json_hash.is_a?(Hash) ? json_hash : nil
 
       @params = json_hash   # @params returns a Hash or nil
+    end
+
+    def bootstrap()
+      bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("bootstrap.ops"))
+      op = OperationRunner.new(self, bootstrap_ops_file)
+      result = op.run([], params_json_hash: @params)
+      info "Bootstrap results:"
+      info result
     end
 
     # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]

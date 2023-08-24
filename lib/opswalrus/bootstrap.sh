@@ -38,8 +38,8 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo needrestart -q -r a
   sudo needrestart -q -r a
 elif echo $OS | grep -q 'fedora'; then
-  sudo yum groupinstall -y 'Development Tools'
-  sudo yum install -y procps-ng curl file git
+  sudo dnf groupinstall -y 'Development Tools'
+  sudo dnf -yq install procps-ng curl file git
 elif echo $OS | grep -q 'arch'; then
   sudo pacman -Syu --noconfirm base-devel procps-ng curl file git
 else

@@ -1,0 +1,4 @@
+ssh in: :sequence do
+  puts "Bootstrapping #{to_s} (alias=#{self.alias})"
+  # bootstrap()
+end

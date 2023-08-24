@@ -49,13 +49,38 @@ module OpsWalrus
     long_desc 'Report on the host inventory'
     command :inventory do |c|
       c.action do |global_options, options, args|
-        hosts = global_options[:hosts]
-        tags = global_options[:tags]
+        hosts = global_options[:hosts] || []
+        tags = global_options[:tags] || []
 
         log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
         $app.set_log_level(log_level)
 
         $app.report_inventory(hosts, tags: tags)
+      end
+    end
+
+    desc 'Bootstrap a set of hosts to run opswalrus'
+    long_desc 'Bootstrap a set of hotss to run opswalrus: install dependencies, ruby, opswalrus gem'
+    command :bootstrap do |c|
+      # dry run
+      c.switch :noop, desc: "Perform a dry run"
+      c.switch :dryrun, desc: "Perform a dry run"
+      c.switch :dry_run, desc: "Perform a dry run"
+
+      c.action do |global_options, options, args|
+        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+        $app.set_log_level(log_level)
+
+        hosts = global_options[:hosts] || []
+        tags = global_options[:tags] || []
+
+        $app.set_inventory_hosts(hosts)
+        $app.set_inventory_tags(tags)
+
+        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        $app.dry_run! if dry_run
+
+        $app.bootstrap()
       end
     end
 
