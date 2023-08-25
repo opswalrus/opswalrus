@@ -1,4 +1,5 @@
-ssh_noprep in: :sequence do
+# ssh_noprep in: :sequence do
+ssh_noprep do
   puts "Bootstrapping #{to_s} (alias=#{self.alias})"
   _bootstrap_host()
 end

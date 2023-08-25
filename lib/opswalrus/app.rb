@@ -57,6 +57,7 @@ module OpsWalrus
       @local_hostname = "localhost"
       @mode = :report     # :report | :script
       @dry_run = false
+      @zip_mutex = Thread::Mutex.new
     end
 
     def to_s
@@ -414,9 +415,13 @@ module OpsWalrus
     end
 
     def zip
-      tmpzip = pwd.join("tmpops.zip")
-      FileUtils.rm(tmpzip) if tmpzip.exist?
-      @zip_bundle_path ||= DirZipper.zip(pwd, tmpzip)
+      @zip ||= begin
+        @zip_mutex.synchronize do
+          tmpzip = pwd.join("tmpops.zip")
+          FileUtils.rm(tmpzip) if tmpzip.exist?
+          DirZipper.zip(pwd, tmpzip)
+        end
+      end
     end
 
   end
