@@ -56,8 +56,24 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
 # install gcc, ruby, age
 brew install gcc
-brew install ruby
 brew install age    # https://github.com/FiloSottile/age
 
+### install ruby
+
+# 1. via homebrew
+# brew install ruby
+# this doesn't install some gems nicely
+
+# 2. via ruby-install
+# brew install bash grep wget curl md5sha1sum sha2 gnu-tar bzip2 xz patchutils gcc
+brew install ruby-install
+ruby-install --update
+ruby-install ruby 3.2.2
+
+# 3. rvm
+# gpg2 --keyserver keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+# \curl -sSL https://get.rvm.io | bash -s stable --autolibs=homebrew
+# rvm install 3.2.2
+
 # install opswalrus gem
-gem install opswalrus
+$HOME/.rubies/ruby-3.2.2/bin/gem install opswalrus

@@ -187,7 +187,8 @@ module OpsWalrus
         host
       end
 
-      cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
+      # cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
+      cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; #{Dir.home}/.rubies/ruby-3.2.2/bin/gem install opswalrus exec -g opswalrus ops"
       cmd << " -v" if verbose
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options
