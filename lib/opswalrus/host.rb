@@ -6,6 +6,9 @@ require_relative "invocation"
 
 module OpsWalrus
 
+  OPS_GEM="$HOME/.local/share/rtx/shims/gem"
+  OPS_CMD="$HOME/.local/share/rtx/shims/ops"
+
   # the subclasses of HostProxy will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
   class HostProxy
 
@@ -188,7 +191,8 @@ module OpsWalrus
       end
 
       # cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; /home/linuxbrew/.linuxbrew/bin/gem exec --conservative -g opswalrus ops"
-      cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; $HOME/.rubies/ruby-3.2.2/bin/gem exec --conservative -g opswalrus ops"
+      # cmd = "OPS_GEM=\"#{OPS_GEM}\" OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; $OPS_GEM exec --conservative -g opswalrus ops"
+      cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; #{OPS_CMD}"
       cmd << " -v" if verbose
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options

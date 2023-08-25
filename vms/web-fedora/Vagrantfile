@@ -29,6 +29,9 @@ Vagrant.configure("2") do |config|
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
+    echo "tmpfs /tmp tmpfs rw,nodev,nosuid,size=5G 0 0" | sudo tee -a /etc/fstab
+
+    # this helps to address the issue where new builds of fedora do not honor the vagrant network config settings
     sudo dnf install -yq NetworkManager-initscripts-ifcfg-rh
 
     # this migrates the old network management config to the new style
