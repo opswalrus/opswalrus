@@ -5,12 +5,13 @@ if [ -x "$(command -v /home/linuxbrew/.linuxbrew/bin/brew)" ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
   # exit early if ruby already exists
-  if [ -x "$(command -v ruby)" ]; then
+  if [ -x "$(command -v $HOME/.rubies/ruby-3.2.2/bin/ruby)" ]; then
     echo 'Ruby is already installed.' >&2
 
     # make sure the latest opswalrus gem is installed
     # todo: figure out how to install this differently, so that test versions will work
-    gem install opswalrus
+    # gem install opswalrus
+    $HOME/.rubies/ruby-3.2.2/bin/gem install opswalrus
 
     exit 0
   fi
