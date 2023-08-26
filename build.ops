@@ -33,6 +33,9 @@ puts "Write version.rb for version #{version}"
 core.template.write(path: "./lib/opswalrus/version.rb", template: template, variables: {version: version})
 
 sh("Build gem") { 'gem build opswalrus.gemspec' }
+
+sh("Commit Gemfile.lock and version.rb") { 'git commit -am "gem {{ version }}" && git push' }
+
 bw_status_output = sh("Check whether Bitwarden is locked or not") { 'bw status' }
 # the status command currently exhibits an error in which it emits 'mac failed.' some number of times, so we need to filter that out
 # see:
