@@ -63,6 +63,12 @@ module WalrusLang
   end
 end
 
+class String
+  def render_template(hash)
+    WalrusLang.render(self, hash)
+  end
+end
+
 class Hash
   def to_binding
     OpenStruct.new(self).instance_eval { binding }
@@ -77,7 +83,7 @@ end
 
 def mustache(&block)
   template_string = block.call
-  template_string =~ /{{.*}}/ ? WalrusLang.render(block.call, block.binding) : template_string
+  template_string =~ /{{.*}}/ ? WalrusLang.render(template_string, block.binding) : template_string
 end
 
 
