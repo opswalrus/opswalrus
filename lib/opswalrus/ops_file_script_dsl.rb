@@ -175,9 +175,9 @@ module OpsWalrus
     def env(*keys)
       keys = keys.map(&:to_s)
       if keys.empty?
-        @env
+        @runtime_env.env
       else
-        @env.dig(*keys)
+        @runtime_env.env.dig(*keys)
       end
     end
 

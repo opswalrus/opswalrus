@@ -75,6 +75,13 @@ module OpsWalrus
     end
   end
 
+  class EnvParams < InvocationParams
+    # params : Hash | ArrayOrHashNavigationProxy
+    def initialize(hashlike_params = ENV)
+      super(hashlike_params)
+    end
+  end
+
   class OpsFileScript
 
     def self.define_for(ops_file, ruby_script)

@@ -234,9 +234,11 @@ module OpsWalrus
 
     attr_accessor :app
     attr_accessor :pty
+    attr_reader :env
 
     def initialize(app)
       @app = app
+      @env = EnvParams.new(ENV)
       @bundle_load_path = LoadPath.new(self, @app.bundle_dir)
       @app_load_path = LoadPath.new(self, @app.pwd)
 
