@@ -30,7 +30,7 @@ module OpsWalrus
         all_hosts
       else
         all_hosts.select do |host|
-          @tagstags.all? {|t| host.tags.include? t }
+          @tags.all? {|t| host.tags.include? t }
         end
       end.reject{|host| host.ignore? }
 

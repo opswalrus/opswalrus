@@ -13,8 +13,8 @@ module OpsWalrus
     def self.edit(file_path)
       tempfile = Tempfile.new
       begin
-        HostsFile.new(file_path).decrypt(tempfile.path)
         tempfile.close(false)   # we want to close the file without unlinking so that the editor can write to it
+        HostsFile.new(file_path).decrypt(tempfile.path)
         if TTY::Editor.open(tempfile.path)
           # tempfile.open()
           HostsFile.new(tempfile.path).encrypt(file_path)

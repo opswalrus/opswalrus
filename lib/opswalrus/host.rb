@@ -1,5 +1,6 @@
 require "set"
 require "sshkit"
+require "tempfile"
 
 require_relative "interaction_handlers"
 require_relative "invocation"
@@ -213,6 +214,7 @@ module OpsWalrus
       @props = props.is_a?(Array) ? {"tags" => props} : props.to_h
       @default_props = default_props
       @hosts_file = hosts_file
+      @tmp_ssh_key_files = []
     end
 
     # secret_ref: SecretRef
@@ -292,8 +294,9 @@ module OpsWalrus
       else
         [ssh_key]
       end
-      keys = keys.map {|key| dereference_secret_if_needed(key) }
+      keys = write_temp_ssh_keys_if_needed(keys)
 
+      # the various options for net-ssh are captured in https://net-ssh.github.io/ssh/v1/chapter-2.html
       @sshkit_host ||= ::SSHKit::Host.new({
         hostname: host,
         port: ssh_port || 22,
@@ -301,6 +304,28 @@ module OpsWalrus
         password: ssh_password,
         keys: keys
       })
+    end
+
+    # keys is an Array ( String | SecretRef )
+    # such that if a key is a String, then it is interpreted as a path to a key file
+    # and if the key is a SecretRef, then the secret's plaintext value is interpreted
+    # as an ssh key string, and must thereforce be written to a tempfile so that net-ssh
+    # can use it via file reference (since net-ssh only allows the keys field to be an array of file paths).
+    #
+    # returns an array of file paths to key files
+    def write_temp_ssh_keys_if_needed(keys)
+      keys.map do |key_file_path_or_in_memory_key_text|
+        if key_file_path_or_in_memory_key_text.is_a? SecretRef    # we're dealing with an in-memory key file; we need to write it to a tempfile
+          tempfile = Tempfile.new
+          @tmp_ssh_key_files << tempfile
+          key_file_contents = @hosts_file.read_secret(key_file_path_or_in_memory_key_text.to_s)
+          tempfile.write(key_file_contents)
+          tempfile.close(false)   # we want to close the file without unlinking so that the editor can write to it
+          tempfile.path
+        else    # we're dealing with a reference to a keyfile - a path - so return it
+          key_file_path_or_in_memory_key_text
+        end
+      end
     end
 
     def set_runtime_env(runtime_env)
@@ -319,6 +344,8 @@ module OpsWalrus
       @runtime_env = nil
       @sshkit_backend = nil
       @tmp_bundle_root_dir = nil
+      @tmp_ssh_key_files.each {|tmpfile| tmpfile.close() rescue nil; tmpfile.unlink() rescue nil }
+      @tmp_ssh_key_files = []
     end
 
     def execute(*args, input: nil)
