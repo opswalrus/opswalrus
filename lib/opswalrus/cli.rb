@@ -67,10 +67,10 @@ module OpsWalrus
 
       desc 'Edit hosts in inventory'
       long_desc 'Edit the hosts in the inventory and their secrets'
-      arg_name 'hosts_file', :optional
+      # arg_name 'hosts_file', :optional
       c.command :edit do |edit|
         edit.action do |global_options, options, args|
-          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+          file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
 
           $app.edit_inventory(file_path)
         end
@@ -78,23 +78,25 @@ module OpsWalrus
 
       desc 'Encrypt secrets in inventory file'
       long_desc 'Encrypt secrets in inventory file'
-      arg_name 'hosts_file', :optional
+      arg_name 'encrypted_host_file_path', :optional
       c.command :encrypt do |encrypt|
         encrypt.action do |global_options, options, args|
-          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+          file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
+          output_file_path = args.first || file_path
 
-          $app.encrypt_inventory(file_path)
+          $app.encrypt_inventory(file_path, output_file_path)
         end
       end
 
       desc 'Decrypt secrets in inventory file'
       long_desc 'Decrypt secrets in inventory file'
-      arg_name 'hosts_file', :optional
+      arg_name 'decrypted_host_file_path', :optional
       c.command :decrypt do |decrypt|
         decrypt.action do |global_options, options, args|
-          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+          file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
+          output_file_path = args.first || file_path
 
-          $app.decrypt_inventory(file_path)
+          $app.decrypt_inventory(file_path, output_file_path)
         end
       end
 

@@ -71,6 +71,12 @@ module OpsWalrus
       end
     end
 
+    def decrypt_secrets!(cipher)
+      secrets.each do |secret_name, secret|
+        secret.decrypt(cipher)
+      end
+    end
+
     # returns a Hash of id-name/(PublicKey | Array String ) pairs
     def ids
       @ids ||= begin
@@ -108,9 +114,12 @@ module OpsWalrus
 
     def decrypt(decrypted_file_path = nil)
       decrypted_file_path ||= @hosts_file_path
-      # File.write(decrypted_file_path, to_yaml)
-      puts "decrypt and write #{decrypted_file_path}:"
-      puts HostsFileMapper.to_yaml(self)
+      puts "Decrypting #{@hosts_file_path} and writing to #{decrypted_file_path}."
+      private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
+      cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
+      decrypt_secrets!(cipher)
+      File.write(decrypted_file_path, to_yaml)
+      # puts to_yaml
     end
 
     # when editor fails to open a false status is returned
@@ -123,13 +132,12 @@ module OpsWalrus
 
     def encrypt(encrypted_file_path = nil)
       encrypted_file_path ||= @hosts_file_path
-      # File.write(encrypted_file_path, to_yaml)
-      puts "encrypt and write #{encrypted_file_path}:"
+      puts "Encrypting #{@hosts_file_path} and writing to #{encrypted_file_path}."
       private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
       cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
       encrypt_secrets!(cipher)
-      puts to_yaml
-      # puts HostsFileMapper.to_yaml(self)
+      File.write(encrypted_file_path, to_yaml)
+      # puts to_yaml
     end
 
     # returns an Array(Host)

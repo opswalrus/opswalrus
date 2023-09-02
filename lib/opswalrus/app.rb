@@ -396,18 +396,18 @@ module OpsWalrus
       hosts_file.edit
     end
 
-    def encrypt_inventory(file_path)
+    def encrypt_inventory(file_path, output_file_path)
       raise "File not found: #{file_path}" unless File.exist?(file_path)
 
       hosts_file = HostsFile.new(file_path)
-      hosts_file.encrypt()
+      hosts_file.encrypt(output_file_path)
     end
 
-    def decrypt_inventory(file_path)
+    def decrypt_inventory(file_path, output_file_path)
       raise "File not found: #{file_path}" unless File.exist?(file_path)
 
       hosts_file = HostsFile.new(file_path)
-      hosts_file.decrypt()
+      hosts_file.decrypt(output_file_path)
     end
 
     def print_version
