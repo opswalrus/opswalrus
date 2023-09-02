@@ -45,18 +45,60 @@ module OpsWalrus
       end
     end
 
-    desc 'Report on the host inventory'
-    long_desc 'Report on the host inventory'
+    desc 'View and edit host inventory'
+    long_desc 'View and edit host inventory'
     command :inventory do |c|
-      c.action do |global_options, options, args|
-        hosts = global_options[:hosts] || []
-        tags = global_options[:tags] || []
 
-        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-        $app.set_log_level(log_level)
+      desc 'List hosts in inventory'
+      long_desc 'List hosts in inventory'
+      c.command [:ls, :list] do |list|
+        list.action do |global_options, options, args|
 
-        $app.report_inventory(hosts, tags: tags)
+          hosts = global_options[:hosts] || []
+          tags = global_options[:tags] || []
+
+          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
+          $app.set_log_level(log_level)
+
+          $app.report_inventory(hosts, tags: tags)
+
+        end
       end
+
+      desc 'Edit hosts in inventory'
+      long_desc 'Edit the hosts in the inventory and their secrets'
+      arg_name 'hosts_file', :optional
+      c.command :edit do |edit|
+        edit.action do |global_options, options, args|
+          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+
+          $app.edit_inventory(file_path)
+        end
+      end
+
+      desc 'Encrypt secrets in inventory file'
+      long_desc 'Encrypt secrets in inventory file'
+      arg_name 'hosts_file', :optional
+      c.command :encrypt do |encrypt|
+        encrypt.action do |global_options, options, args|
+          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+
+          $app.encrypt_inventory(file_path)
+        end
+      end
+
+      desc 'Decrypt secrets in inventory file'
+      long_desc 'Decrypt secrets in inventory file'
+      arg_name 'hosts_file', :optional
+      c.command :decrypt do |decrypt|
+        decrypt.action do |global_options, options, args|
+          file_path = args.first || HostsFile::DEFAULT_FILE_NAME
+
+          $app.decrypt_inventory(file_path)
+        end
+      end
+
+      c.default_command :list
     end
 
     desc 'Bootstrap a set of hosts to run opswalrus'

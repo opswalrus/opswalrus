@@ -10,11 +10,14 @@ require "shellwords"
 require "socket"
 require "stringio"
 require "yaml"
-require_relative "errors"
+
 require_relative "patches"
+
+require_relative "errors"
 require_relative "git"
 require_relative "host"
 require_relative "hosts_file"
+require_relative "inventory"
 require_relative "operation_runner"
 require_relative "bundler"
 require_relative "package_file"
@@ -381,29 +384,30 @@ module OpsWalrus
       tags = @inventory_tag_selections + (tag_selection || [])
       tags.uniq!
 
-      host_references = ["hosts.yaml"] if (host_references.nil? || host_references.empty?) && File.exist?("hosts.yaml")
+      host_references = [HostsFile::DEFAULT_FILE_NAME] if (host_references.nil? || host_references.empty?) && File.exist?(HostsFile::DEFAULT_FILE_NAME)
 
-      hosts_files, host_strings = host_references.partition {|ref| File.exist?(ref) }
-      hosts_files = hosts_files.map {|file_path| HostsFile.new(file_path) }
-      untagged_hosts = host_strings.map(&:strip).uniq.map {|host| Host.new(host) }
-      inventory_file_hosts = hosts_files.reduce({}) do |host_map, hosts_file|
-        hosts_file.hosts.each do |host|
-          (host_map[host] ||= host).tag!(host.tags)
-        end
+      Inventory.new(host_references, tags).hosts
+    end
 
-        host_map
-      end.keys
-      all_hosts = untagged_hosts + inventory_file_hosts
+    def edit_inventory(file_path)
+      raise "File not found: #{file_path}" unless File.exist?(file_path)
 
-      selected_hosts = if tags.empty?
-        all_hosts
-      else
-        all_hosts.select do |host|
-          tags.all? {|t| host.tags.include? t }
-        end
-      end
+      hosts_file = HostsFile.new(file_path)
+      hosts_file.edit
+    end
 
-      selected_hosts.sort_by(&:to_s)
+    def encrypt_inventory(file_path)
+      raise "File not found: #{file_path}" unless File.exist?(file_path)
+
+      hosts_file = HostsFile.new(file_path)
+      hosts_file.encrypt()
+    end
+
+    def decrypt_inventory(file_path)
+      raise "File not found: #{file_path}" unless File.exist?(file_path)
+
+      hosts_file = HostsFile.new(file_path)
+      hosts_file.decrypt()
     end
 
     def print_version

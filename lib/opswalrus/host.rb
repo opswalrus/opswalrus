@@ -1,4 +1,5 @@
 require "set"
+require "shale"
 require "sshkit"
 
 require_relative "interaction_handlers"
@@ -207,30 +208,35 @@ module OpsWalrus
   class Host
     include HostDSL
 
-    def initialize(name_or_ip_or_cidr, tags = [], props = {})
+    def initialize(name_or_ip_or_cidr, tags = [], props = {}, default_props = {})
       @name_or_ip_or_cidr = name_or_ip_or_cidr
       @tags = tags.to_set
       @props = props.is_a?(Array) ? {"tags" => props} : props.to_h
+      @default_props = default_props
     end
 
     def host
       @name_or_ip_or_cidr
     end
 
+    def alias
+      @props["alias"] || @default_props["alias"]
+    end
+
     def ssh_port
-      @props["port"]
+      @props["port"] || @default_props["port"]
     end
 
     def ssh_user
-      @props["user"]
+      @props["user"] || @default_props["user"]
     end
 
     def ssh_password
-      @props["password"]
+      @props["password"] || @default_props["password"]
     end
 
-    def ssh_keys
-      @props["keys"]
+    def ssh_key
+      @props["ssh-key"] || @default_props["ssh-key"]
     end
 
     def hash
@@ -243,10 +249,6 @@ module OpsWalrus
 
     def to_s
       @name_or_ip_or_cidr
-    end
-
-    def alias
-      @props["alias"]
     end
 
     def tag!(*tags)
@@ -263,7 +265,7 @@ module OpsWalrus
     def summary(verbose = false)
       report = "#{to_s}\n  tags: #{tags.sort.join(', ')}"
       if verbose
-        @props.reject{|k,v| k == 'tags' }.each {|k,v| report << "\n  #{k}: #{v}" }
+        @default_props.merge(@props).reject{|k,v| k == 'tags' }.each {|k,v| report << "\n  #{k}: #{v}" }
       end
       report
     end
@@ -274,7 +276,7 @@ module OpsWalrus
         port: ssh_port || 22,
         user: ssh_user || raise("No ssh user specified to connect to #{host}"),
         password: ssh_password,
-        keys: ssh_keys
+        keys: ssh_key
       })
     end
 
@@ -317,6 +319,38 @@ module OpsWalrus
       @sshkit_backend.download!(remote_path.to_s, local_path.to_s)
     end
 
+    def to_h
+      hash = {}
+      hash["alias"] = @props["alias"] if @props["alias"]
+      hash["user"] = @props["user"] if @props["user"]
+      hash["port"] = @props["port"] if @props["port"]
+      hash["password"] = @props["password"] if @props["password"]
+      hash["ssh-key"] = @props["ssh-key"] if @props["ssh-key"]
+      hash["tags"] = tags.to_a unless tags.empty?
+      hash
+    end
+  end
+
+  class HostMapper < Shale::Mapper
+    model Host
+
+    attribute :alias, Shale::Type::String
+    attribute :user, Shale::Type::String
+    attribute :password, Shale::Type::String
+    attribute :ssh_key, Shale::Type::String
+    attribute :tags, Shale::Type::String, collection: true
+
+    yaml do
+      map 'ssh_key', using: { from: :ssh_key_from_yaml, to: :ssh_key_to_yaml }
+    end
+
+    def ssh_key_from_yaml(model, value)
+      model.ssh_key = value
+    end
+
+    def ssh_key_to_yaml(model, doc)
+      doc['ssh-key'] = model.ssh_key
+    end
   end
 
 end
