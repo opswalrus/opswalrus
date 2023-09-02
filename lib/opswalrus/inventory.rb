@@ -32,7 +32,7 @@ module OpsWalrus
         all_hosts.select do |host|
           @tagstags.all? {|t| host.tags.include? t }
         end
-      end
+      end.reject{|host| host.ignore? }
 
       selected_hosts.sort_by(&:to_s)
     end

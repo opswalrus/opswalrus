@@ -223,6 +223,10 @@ module OpsWalrus
       @props["alias"] || @default_props["alias"]
     end
 
+    def ignore?
+      @props["ignore"] || @default_props["ignore"]
+    end
+
     def ssh_port
       @props["port"] || @default_props["port"]
     end
@@ -322,6 +326,7 @@ module OpsWalrus
     def to_h
       hash = {}
       hash["alias"] = @props["alias"] if @props["alias"]
+      hash["ignore"] = @props["ignore"] if @props["ignore"]
       hash["user"] = @props["user"] if @props["user"]
       hash["port"] = @props["port"] if @props["port"]
       hash["password"] = @props["password"] if @props["password"]
