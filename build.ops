@@ -49,7 +49,7 @@ bw_status_output = bw_status_output.gsub('mac failed.', '').strip
 bw_status_json = bw_status_output.parse_json
 
 if bw_status_json['status'] != 'unlocked'
-  exit 0, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
+  exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
 end
 
 totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
