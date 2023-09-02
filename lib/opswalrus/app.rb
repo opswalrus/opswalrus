@@ -1,7 +1,6 @@
 require "citrus"
 require "io/console"
 require "json"
-# require "logger"
 require "random/formatter"
 require "pastel"
 require "pathname"
@@ -36,6 +35,7 @@ module OpsWalrus
 
 
     attr_reader :local_hostname
+    attr_reader :identity_file_paths
 
     def initialize(pwd = Dir.pwd)
       SemanticLogger.default_level = :info
@@ -52,6 +52,7 @@ module OpsWalrus
       @verbose = false
       @sudo_user = nil
       @sudo_password = nil
+      @identity_file_paths = []
       @inventory_host_references = []
       @inventory_tag_selections = []
       @params = nil
@@ -94,6 +95,11 @@ module OpsWalrus
     def set_local_hostname(hostname)
       hostname = hostname.strip
       @local_hostname = hostname.empty? ? "localhost" : hostname
+    end
+
+    def set_identity_files(*paths)
+      @identity_file_paths = paths.flatten.compact.uniq
+      puts "set_identity_files: #{@identity_file_paths}"
     end
 
     def set_inventory_hosts(*hosts)

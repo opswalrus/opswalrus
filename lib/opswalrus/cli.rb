@@ -4,6 +4,11 @@ require "gli"
 require_relative "app"
 
 module OpsWalrus
+  def self.env_specified_age_ids()
+    # ENV['AGE_ID'] || (ENV['OPSWALRUS_AGE_IDS'] && Dir.glob(ENV['OPSWALRUS_AGE_IDS']))
+    ENV['OPSWALRUS_AGE_IDS'] && Dir.glob(ENV['OPSWALRUS_AGE_IDS'])
+  end
+
   class Cli
     extend GLI::App
 
@@ -37,6 +42,7 @@ module OpsWalrus
 
     flag [:h, :hosts], multiple: true, desc: "Specify the hosts.yaml file"
     flag [:t, :tags], multiple: true, desc: "Specify a set of tags to filter the hosts by"
+    flag [:i, :id], multiple: true, desc: "Specify one or more Age Encryption identify files (private keys)"
 
     desc 'Print version'
     command :version do |c|
@@ -54,14 +60,13 @@ module OpsWalrus
       c.command [:ls, :list] do |list|
         list.action do |global_options, options, args|
 
-          hosts = global_options[:hosts] || []
-          tags = global_options[:tags] || []
+          hosts = global_options[:hosts]
+          tags = global_options[:tags]
 
           log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
           $app.set_log_level(log_level)
 
           $app.report_inventory(hosts, tags: tags)
-
         end
       end
 
@@ -71,6 +76,12 @@ module OpsWalrus
       c.command :edit do |edit|
         edit.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
+
+          puts global_options[:id].inspect
+
+          id_files = global_options[:id]
+          id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+          $app.set_identity_files(id_files)
 
           $app.edit_inventory(file_path)
         end
@@ -84,6 +95,11 @@ module OpsWalrus
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
           output_file_path = args.first || file_path
 
+          id_files = global_options[:id]
+          id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+          $app.set_identity_files(id_files)
+
           $app.encrypt_inventory(file_path, output_file_path)
         end
       end
@@ -95,6 +111,11 @@ module OpsWalrus
         decrypt.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
           output_file_path = args.first || file_path
+
+          id_files = global_options[:id]
+          id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+          $app.set_identity_files(id_files)
 
           $app.decrypt_inventory(file_path, output_file_path)
         end
@@ -115,11 +136,16 @@ module OpsWalrus
         log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
         $app.set_log_level(log_level)
 
-        hosts = global_options[:hosts] || []
-        tags = global_options[:tags] || []
+        hosts = global_options[:hosts]
+        tags = global_options[:tags]
 
         $app.set_inventory_hosts(hosts)
         $app.set_inventory_tags(tags)
+
+        id_files = global_options[:id]
+        id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+        $app.set_identity_files(id_files)
 
         dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
         $app.dry_run! if dry_run
@@ -146,8 +172,8 @@ module OpsWalrus
         log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
         $app.set_log_level(log_level)
 
-        hosts = global_options[:hosts] || []
-        tags = global_options[:tags] || []
+        hosts = global_options[:hosts]
+        tags = global_options[:tags]
 
         $app.set_inventory_hosts(hosts)
         $app.set_inventory_tags(tags)
@@ -158,6 +184,11 @@ module OpsWalrus
         $app.set_params(params)
 
         $app.set_sudo_user(user) if user
+
+        id_files = global_options[:id]
+        id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+        $app.set_identity_files(id_files)
 
         dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
         $app.dry_run! if dry_run

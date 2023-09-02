@@ -1,5 +1,4 @@
 require "set"
-require "shale"
 require "sshkit"
 
 require_relative "interaction_handlers"
@@ -335,27 +334,5 @@ module OpsWalrus
       hash
     end
   end
-
-  # class HostMapper < Shale::Mapper
-  #   model Host
-
-  #   attribute :alias, Shale::Type::String
-  #   attribute :user, Shale::Type::String
-  #   attribute :password, Shale::Type::String
-  #   attribute :ssh_key, Shale::Type::String
-  #   attribute :tags, Shale::Type::String, collection: true
-
-  #   yaml do
-  #     map 'ssh_key', using: { from: :ssh_key_from_yaml, to: :ssh_key_to_yaml }
-  #   end
-
-  #   def ssh_key_from_yaml(model, value)
-  #     model.ssh_key = value
-  #   end
-
-  #   def ssh_key_to_yaml(model, doc)
-  #     doc['ssh-key'] = model.ssh_key
-  #   end
-  # end
 
 end

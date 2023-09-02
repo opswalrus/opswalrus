@@ -1,7 +1,6 @@
 require "open3"
 require "pathname"
 require "psych"
-require "shale"
 require "stringio"
 require "tempfile"
 require "tty-editor"
@@ -115,8 +114,8 @@ module OpsWalrus
     def decrypt(decrypted_file_path = nil)
       decrypted_file_path ||= @hosts_file_path
       puts "Decrypting #{@hosts_file_path} -> #{decrypted_file_path}."
-      private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
-      cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
+      raise("Path to age identity not specified") if App.instance.identity_file_paths.empty?
+      cipher = AgeEncryptionCipher.new(ids, App.instance.identity_file_paths)
       decrypt_secrets!(cipher)
       File.write(decrypted_file_path, to_yaml)
       # puts to_yaml
@@ -125,8 +124,8 @@ module OpsWalrus
     def encrypt(encrypted_file_path = nil)
       encrypted_file_path ||= @hosts_file_path
       puts "Encrypting #{@hosts_file_path} -> #{encrypted_file_path}."
-      private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
-      cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
+      raise("Path to age identity not specified") if App.instance.identity_file_paths.empty?
+      cipher = AgeEncryptionCipher.new(ids, App.instance.identity_file_paths)
       encrypt_secrets!(cipher)
       File.write(encrypted_file_path, to_yaml)
       # puts to_yaml
@@ -212,12 +211,6 @@ module OpsWalrus
       @public_key = coder.scalar
       # @public_key = coder['public_key']
     end
-  end
-
-  class PublicKeyMapper < Shale::Mapper
-    model PublicKey
-    attribute :ids, Shale::Type::String
-    attribute :value, Shale::Type::String
   end
 
   class SecretRef
@@ -333,9 +326,9 @@ module OpsWalrus
 
   class AgeEncryptionCipher < Cipher
     # id_to_public_key_map is a Hash of id-name/(PublicKey | Array String ) pairs
-    def initialize(id_to_public_key_map, private_key_file_path)
+    def initialize(id_to_public_key_map, private_key_file_paths)
       super(id_to_public_key_map)
-      @private_key_file_path = private_key_file_path
+      @private_key_file_paths = private_key_file_paths
     end
 
     # value is the string value to be encrypted
@@ -348,7 +341,7 @@ module OpsWalrus
 
     # returns the decrypted text as a String
     def decrypt(value)
-      AgeEncryption.decrypt(value, [@private_key_file_path])
+      AgeEncryption.decrypt(value, @private_key_file_paths)
     end
 
     def encrypted?(value)
