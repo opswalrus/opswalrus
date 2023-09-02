@@ -167,7 +167,7 @@ module OpsWalrus
       end || []
     end
 
-    def to_yaml(encrypted: true)
+    def to_yaml
       hash = {}
       hash["defaults"] = defaults unless defaults.empty?
       hosts.each do |host|
@@ -363,19 +363,33 @@ module OpsWalrus
       @ids = id_references
     end
 
-    # # #init_with and #encode_with are demonstrated here:
-    # # - https://djellemah.com/blog/2014/07/23/yaml-deserialisation/
-    # # - https://stackoverflow.com/questions/10629209/how-can-i-control-which-fields-to-serialize-with-yaml
-    # # - https://github.com/protocolbuffers/protobuf/issues/4391
-    # # serialise to yaml
-    # def encode_with(coder)
-    #   coder['value'] = @value
-    # end
+    # #init_with and #encode_with are demonstrated here:
+    # - https://djellemah.com/blog/2014/07/23/yaml-deserialisation/
+    # - https://stackoverflow.com/questions/10629209/how-can-i-control-which-fields-to-serialize-with-yaml
+    # - https://github.com/protocolbuffers/protobuf/issues/4391
+    # serialise to yaml
+    def encode_with(coder)
+      coder.tag = nil
 
-    # # deserialise from yaml
-    # def init_with(coder)
-    #   @value = coder['value']
-    # end
+      # per https://rubydoc.info/stdlib/psych/3.0.0/Psych/Coder#scalar-instance_method
+      # coder.represent_scalar(nil, @public_key)
+
+      # coder.scalar = @public_key
+      # puts @ids.inspect
+      single_line_ids = @ids.join(", ")
+      if single_line_ids.size <= 80
+        coder['ids'] = single_line_ids
+      else
+        coder['ids'] = @ids
+      end
+      coder['value'] = @value
+    end
+
+    # deserialise from yaml
+    def init_with(coder)
+      @public_key = coder.scalar
+      # @public_key = coder['public_key']
+    end
 
     def encrypt(cipher)
       @value = cipher.encrypt(@value, @ids) unless cipher.encrypted?(@value)
@@ -388,34 +402,34 @@ module OpsWalrus
     end
   end
 
-  class SecretMapper < Shale::Mapper
-    model Secret
+  # class SecretMapper < Shale::Mapper
+  #   model Secret
 
-    attribute :ids, Shale::Type::String
-    attribute :value, Shale::Type::String
-  end
+  #   attribute :ids, Shale::Type::String
+  #   attribute :value, Shale::Type::String
+  # end
 
-  class HostsFileMapper < Shale::Mapper
-    model HostsFile
+  # class HostsFileMapper < Shale::Mapper
+  #   model HostsFile
 
-    # attribute :defaults, Shale::Type::String
-    # attribute :hosts, HostMapper, collection: true
-    # attribute :secrets, SecretMapper, collection: true
-    # attribute :ids, Shale::Type::String, collection: true
+  #   # attribute :defaults, Shale::Type::String
+  #   # attribute :hosts, HostMapper, collection: true
+  #   # attribute :secrets, SecretMapper, collection: true
+  #   # attribute :ids, Shale::Type::String, collection: true
 
-    yaml do
-      map 'defaults', using: { from: :defaults_from_yaml, to: :defaults_to_yaml }
-    end
+  #   yaml do
+  #     map 'defaults', using: { from: :defaults_from_yaml, to: :defaults_to_yaml }
+  #   end
 
-    def defaults_from_yaml(model, value)
-      model.defaults = value
-      # model[:street] = value['street']
-      # model[:city] = value['city']
-    end
+  #   def defaults_from_yaml(model, value)
+  #     model.defaults = value
+  #     # model[:street] = value['street']
+  #     # model[:city] = value['city']
+  #   end
 
-    def defaults_to_yaml(model, doc)
-      doc['defaults'] = model.defaults
-    end
-  end
+  #   def defaults_to_yaml(model, doc)
+  #     doc['defaults'] = model.defaults
+  #   end
+  # end
 
 end
