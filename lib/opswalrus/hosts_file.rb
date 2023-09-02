@@ -97,24 +97,24 @@ module OpsWalrus
       end
     end
 
-    def edit
+    def self.edit(file_path)
       tempfile = Tempfile.new
       begin
-        decrypt(@hosts_file_path, tempfile)
-        tempfile.close(false)   # we want to close the file so that the editor can write to it
-        if open_editor(tempfile.path)
-          tempfile.open()
-          encrypt(tempfile, @hosts_file_path)
+        HostsFile.new(file_path).decrypt(tempfile.path)
+        tempfile.close(false)   # we want to close the file without unlinking so that the editor can write to it
+        if TTY::Editor.open(tempfile.path)
+          # tempfile.open()
+          HostsFile.new(tempfile.path).encrypt(file_path)
         end
       ensure
-        file.close rescue nil
-        file.unlink   # deletes the temp file
+        tempfile.close rescue nil
+        tempfile.unlink   # deletes the temp file
       end
     end
 
     def decrypt(decrypted_file_path = nil)
       decrypted_file_path ||= @hosts_file_path
-      puts "Decrypting #{@hosts_file_path} and writing to #{decrypted_file_path}."
+      puts "Decrypting #{@hosts_file_path} -> #{decrypted_file_path}."
       private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
       cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
       decrypt_secrets!(cipher)
@@ -122,17 +122,9 @@ module OpsWalrus
       # puts to_yaml
     end
 
-    # when editor fails to open a false status is returned
-    def open_editor(path)
-      # editor = TTY::Editor.new(raise_on_failure: true)
-      # editor.open("/path/to/unknown/file")
-      # # => raises TTY::Editor::ComandInvocationError
-      TTY::Editor.open(path)
-    end
-
     def encrypt(encrypted_file_path = nil)
       encrypted_file_path ||= @hosts_file_path
-      puts "Encrypting #{@hosts_file_path} and writing to #{encrypted_file_path}."
+      puts "Encrypting #{@hosts_file_path} -> #{encrypted_file_path}."
       private_key_file_path = ENV["AGE_ID"] || raise("Path to age identity not specified")
       cipher = AgeEncryptionCipher.new(ids, private_key_file_path)
       encrypt_secrets!(cipher)
@@ -409,35 +401,5 @@ module OpsWalrus
       @value
     end
   end
-
-  # class SecretMapper < Shale::Mapper
-  #   model Secret
-
-  #   attribute :ids, Shale::Type::String
-  #   attribute :value, Shale::Type::String
-  # end
-
-  # class HostsFileMapper < Shale::Mapper
-  #   model HostsFile
-
-  #   # attribute :defaults, Shale::Type::String
-  #   # attribute :hosts, HostMapper, collection: true
-  #   # attribute :secrets, SecretMapper, collection: true
-  #   # attribute :ids, Shale::Type::String, collection: true
-
-  #   yaml do
-  #     map 'defaults', using: { from: :defaults_from_yaml, to: :defaults_to_yaml }
-  #   end
-
-  #   def defaults_from_yaml(model, value)
-  #     model.defaults = value
-  #     # model[:street] = value['street']
-  #     # model[:city] = value['city']
-  #   end
-
-  #   def defaults_to_yaml(model, doc)
-  #     doc['defaults'] = model.defaults
-  #   end
-  # end
 
 end

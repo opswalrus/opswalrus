@@ -11,7 +11,6 @@ PATH
       pastel (~> 0.8)
       rubyzip (~> 2.3)
       semantic_logger (~> 4.13)
-      shale (~> 1.0)
       sshkit (~> 1.21)
       tty-editor (~> 0.7)
 
@@ -54,7 +53,6 @@ GEM
     rubyzip (2.3.2)
     semantic_logger (4.14.0)
       concurrent-ruby (~> 1.0)
-    shale (1.0.0)
     sshkit (1.21.5)
       net-scp (>= 1.1.2)
       net-ssh (>= 2.8.0)
