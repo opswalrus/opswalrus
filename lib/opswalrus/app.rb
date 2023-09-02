@@ -99,7 +99,6 @@ module OpsWalrus
 
     def set_identity_files(*paths)
       @identity_file_paths = paths.flatten.compact.uniq
-      puts "set_identity_files: #{@identity_file_paths}"
     end
 
     def set_inventory_hosts(*hosts)

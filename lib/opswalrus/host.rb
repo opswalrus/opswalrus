@@ -207,11 +207,22 @@ module OpsWalrus
   class Host
     include HostDSL
 
-    def initialize(name_or_ip_or_cidr, tags = [], props = {}, default_props = {})
+    def initialize(name_or_ip_or_cidr, tags = [], props = {}, default_props = {}, hosts_file)
       @name_or_ip_or_cidr = name_or_ip_or_cidr
       @tags = tags.to_set
       @props = props.is_a?(Array) ? {"tags" => props} : props.to_h
       @default_props = default_props
+      @hosts_file = hosts_file
+    end
+
+    # secret_ref: SecretRef
+    # returns the decrypted value referenced by the supplied SecretRef
+    def dereference_secret_if_needed(secret_ref)
+      if secret_ref.is_a? SecretRef
+        @hosts_file.read_secret(secret_ref.to_s)
+      else
+        secret_ref
+      end
     end
 
     def host
@@ -235,7 +246,8 @@ module OpsWalrus
     end
 
     def ssh_password
-      @props["password"] || @default_props["password"]
+      password = @props["password"] || @default_props["password"]
+      dereference_secret_if_needed(password)
     end
 
     def ssh_key
@@ -274,12 +286,20 @@ module OpsWalrus
     end
 
     def sshkit_host
+      keys = case ssh_key
+      when Array
+        ssh_key
+      else
+        [ssh_key]
+      end
+      keys = keys.map {|key| dereference_secret_if_needed(key) }
+
       @sshkit_host ||= ::SSHKit::Host.new({
         hostname: host,
         port: ssh_port || 22,
         user: ssh_user || raise("No ssh user specified to connect to #{host}"),
         password: ssh_password,
-        keys: ssh_key
+        keys: keys
       })
     end
 

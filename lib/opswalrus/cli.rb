@@ -77,8 +77,6 @@ module OpsWalrus
         edit.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
 
-          puts global_options[:id].inspect
-
           id_files = global_options[:id]
           id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
           $app.set_identity_files(id_files)
