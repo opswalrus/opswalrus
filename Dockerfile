@@ -16,7 +16,7 @@ COPY Gemfile Gemfile.lock opswalrus.gemspec ./
 COPY lib/opswalrus/version.rb /opswalrus/lib/opswalrus/version.rb
 
 # Install system dependencies
-RUN apk add --no-cache --update build-base git docker openrc openssh-client-default \
+RUN apk add --no-cache --update build-base git docker openrc openssh-client-default age \
     && rc-update add docker boot \
     && gem install bundler --version=2.4.3 \
     && bundle install

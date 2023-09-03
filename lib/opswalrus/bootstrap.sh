@@ -14,7 +14,7 @@ GEM_CMD=$RTX_GEM
 
 if [ -x $RTX ]; then
   # rtx_init;
-  # eval "$($RTX activate bash)"
+  # eval "$(rtx activate bash)"
   # if brew is already installed, initialize this shell environment with brew
   # if [ -x "$(command -v /home/linuxbrew/.linuxbrew/bin/brew)" ]; then
   if $RUBY_CMD -e "major, minor, patch = RUBY_VERSION.split('.'); exit 1 unless major.to_i >= 3"; then
