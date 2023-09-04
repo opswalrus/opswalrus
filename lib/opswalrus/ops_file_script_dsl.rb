@@ -207,10 +207,22 @@ module OpsWalrus
       end
     end
 
+    def desc(msg)
+      puts walrus(msg, 2)
+    end
+
+    # runs the given command
     # returns the stdout from the command
     def sh(desc_or_cmd = nil, cmd = nil, input: nil, &block)
       out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
       out
+    end
+
+    # runs the given command
+    # returns true if the exit status was success; false otherwise
+    def sh?(desc_or_cmd = nil, cmd = nil, input: nil, &block)
+      out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
+      status
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
@@ -229,7 +241,20 @@ module OpsWalrus
       cmd = block.call if block
       cmd ||= desc_or_cmd
 
-      cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
+      cmd = if cmd =~ /{{.*}}/
+        if block
+          WalrusLang.render(cmd, block.binding)
+        else
+          offset = 3    # 3, because 1 references the stack frame corresponding to the caller of WalrusLang.eval,
+                        # 2 references the stack frame corresponding to the caller of shell!,
+                        # and 3 references the stack frame corresponding to teh caller of either sh/sh?/shell
+          WalrusLang.eval(cmd, offset)
+        end
+      else
+        cmd
+      end
+      # cmd = WalrusLang.eval(cmd) if !block && cmd =~ /{{.*}}/
+      # cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
 
       #cmd = Shellwords.escape(cmd)
 

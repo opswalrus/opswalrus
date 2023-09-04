@@ -22,7 +22,7 @@ You have two options:
 The path to whatever directory you store your age identity files in should be used in place of `$HOME/.secrets/age` in the following shell alias:
 
 ```shell
-❯ alias ops='docker run --rm -it -v $HOME/.secrets/age:/root/.secrets -e OPSWALRUS_AGE_IDS="/root/.secrets/*" -v $HOME/.ssh:/root/.ssh -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}/:/workdir ghcr.io/opswalrus/ops'
+❯ alias ops='docker run --rm -it -v $HOME/.secrets/age:/root/.secrets -e OPSWALRUS_AGE_IDS="/root/.secrets/*.priv" -v $HOME/.ssh:/root/.ssh -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}/:/workdir ghcr.io/opswalrus/ops'
 
 ❯ ops version
 1.0.13

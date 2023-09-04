@@ -1,3 +1,4 @@
+require "binding_of_caller"
 require "citrus"
 require "ostruct"
 require "stringio"
@@ -61,11 +62,20 @@ module WalrusLang
     ast = WalrusLang::Parser.parse(template)
     ast.render(binding_obj)
   end
+
+  def self.eval(template_string, bindings_from_stack_frame_offset = 1)
+    binding_from_earlier_stack_frame = binding.of_caller(bindings_from_stack_frame_offset)
+    template_string =~ /{{.*}}/ ? WalrusLang.render(template_string, binding_from_earlier_stack_frame) : template_string
+  end
 end
 
 class String
   def render_template(hash)
     WalrusLang.render(self, hash)
+  end
+
+  def mustache
+    WalrusLang.eval(self, 2)
   end
 end
 
@@ -81,11 +91,6 @@ class Binding
   end
 end
 
-def mustache(&block)
-  template_string = block.call
-  template_string =~ /{{.*}}/ ? WalrusLang.render(template_string, block.binding) : template_string
-end
-
 
 # foo = 1
 # bar = 2
@@ -95,4 +100,11 @@ end
 # # puts m.dump
 # puts m.render(binding)
 
-# puts(mustache { "abc {{ 1 + 2 }} def" })
+# puts("abc {{ 1 + 2 }} def".mustache)
+
+# irb(main):096:0> a=5
+# => 5
+# irb(main):097:0> b=8
+# => 8
+# irb(main):098:0> walrus("abc {{ a + b }} def")
+# => "abc 13 def"

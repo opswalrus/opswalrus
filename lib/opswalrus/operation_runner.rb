@@ -37,21 +37,46 @@ module OpsWalrus
         key, value = str_value.split(":", 2)
         if pre_existing_value = memo[param_name]
           memo[param_name] = if value    # we're dealing with a Hash parameter value
-                               pre_existing_value.merge(key => value)
+                               pre_existing_value.merge(key => try_convert(value))
                              else        # we're dealing with an Array parameter value or a scalar parameter value
                                array = pre_existing_value.is_a?(Array) ? pre_existing_value : [pre_existing_value]
-                               array << str_value
+                               array << try_convert(str_value)
                              end
         else
           memo[param_name] = if value    # we're dealing with a Hash parameter value
-                               {key => value}
+                               {key => try_convert(value)}
                              else        # we're dealing with an Array parameter value or a scalar parameter value
-                               str_value
+                               try_convert(str_value)
                              end
         end
         memo
       end
     end
+
+    def try_convert(value)
+      case value.downcase
+      when 'true'
+        true
+      when 'false'
+        false
+      when /^[0-9]+$/
+        value.to_i
+      when /^[0-9]+\.[0-9]+$/
+        value.to_f
+      else
+        value
+      end
+    end
+
+    # def try_convert(value)
+    #   if value.is_a? String
+    #     JSON.parse(value)
+    #   else
+    #     value
+    #   end
+    # rescue JSON::ParserError => e
+    #   value
+    # end
 
     # runtime_kv_args is an Array(String) of the form: ["arg1:val1", "arg1:val2", ...]
     # params_json_hash is a Hash representation of a JSON string
