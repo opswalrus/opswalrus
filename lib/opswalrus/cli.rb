@@ -72,7 +72,7 @@ module OpsWalrus
 
       desc 'Edit hosts in inventory'
       long_desc 'Edit the hosts in the inventory and their secrets'
-      # arg_name 'hosts_file', :optional
+      # arg 'hosts_file', :optional
       c.command :edit do |edit|
         edit.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
@@ -87,7 +87,7 @@ module OpsWalrus
 
       desc 'Encrypt secrets in inventory file'
       long_desc 'Encrypt secrets in inventory file'
-      arg_name 'encrypted_host_file_path', :optional
+      arg 'encrypted_host_file_path', :optional
       c.command :encrypt do |encrypt|
         encrypt.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
@@ -104,7 +104,7 @@ module OpsWalrus
 
       desc 'Decrypt secrets in inventory file'
       long_desc 'Decrypt secrets in inventory file'
-      arg_name 'decrypted_host_file_path', :optional
+      arg 'decrypted_host_file_path', :optional
       c.command :decrypt do |decrypt|
         decrypt.action do |global_options, options, args|
           file_path = global_options[:hosts].first || HostsFile::DEFAULT_FILE_NAME
@@ -154,7 +154,7 @@ module OpsWalrus
 
     desc 'Run an operation from a package'
     long_desc 'Run the specified operation found within the specified package'
-    arg_name 'args', :multiple
+    arg 'args', :multiple
     command :run do |c|
       c.flag [:u, :user], desc: "Specify the user that the operation will run as"
       c.switch :pass, desc: "Prompt for a sudo password"

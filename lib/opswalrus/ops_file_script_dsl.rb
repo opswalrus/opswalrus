@@ -162,7 +162,7 @@ module OpsWalrus
 
     def exit(exit_status, message = nil)
       if message
-        puts message
+        puts message.mustache(3)
       end
       result = if exit_status == 0
         Invocation::Success.new(nil)
@@ -208,7 +208,7 @@ module OpsWalrus
     end
 
     def desc(msg)
-      puts walrus(msg, 2)
+      puts msg.mustache
     end
 
     # runs the given command
@@ -222,7 +222,7 @@ module OpsWalrus
     # returns true if the exit status was success; false otherwise
     def sh?(desc_or_cmd = nil, cmd = nil, input: nil, &block)
       out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
-      status
+      status == 0
     end
 
     # returns the tuple: [stdout, stderr, exit_status]

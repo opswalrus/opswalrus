@@ -135,7 +135,7 @@ module OpsWalrus
     # returns true if the exit status was success; false otherwise
     def sh?(desc_or_cmd = nil, cmd = nil, input: nil, &block)
       out, err, status = *shell!(desc_or_cmd, cmd, block, input: input)
-      status
+      status == 0
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
@@ -224,7 +224,11 @@ module OpsWalrus
     end
 
     def desc(msg)
-      puts walrus(msg, 2)
+      puts msg.mustache
+    end
+
+    def host_prop(name)
+      @props["name"]
     end
 
   end

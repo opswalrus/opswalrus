@@ -74,8 +74,8 @@ class String
     WalrusLang.render(self, hash)
   end
 
-  def mustache
-    WalrusLang.eval(self, 2)
+  def mustache(bindings_from_stack_frame_offset = 2)
+    WalrusLang.eval(self, bindings_from_stack_frame_offset)
   end
 end
 
@@ -106,5 +106,5 @@ end
 # => 5
 # irb(main):097:0> b=8
 # => 8
-# irb(main):098:0> walrus("abc {{ a + b }} def")
+# irb(main):098:0> "abc {{ a + b }} def".mustache
 # => "abc 13 def"
