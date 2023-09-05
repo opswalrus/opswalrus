@@ -74,8 +74,10 @@ class String
     WalrusLang.render(self, hash)
   end
 
-  def mustache(bindings_from_stack_frame_offset = 2)
-    WalrusLang.eval(self, bindings_from_stack_frame_offset)
+  # bindings_from_stack_frame_offset is a count relative to the stack from from which #mustache is called
+  def mustache(bindings_from_stack_frame_offset = 0)
+    base_offset = 2
+    WalrusLang.eval(self, base_offset + bindings_from_stack_frame_offset)
   end
 end
 

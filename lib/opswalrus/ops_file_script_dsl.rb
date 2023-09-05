@@ -162,7 +162,7 @@ module OpsWalrus
 
     def exit(exit_status, message = nil)
       if message
-        puts message.mustache(3)
+        puts message.mustache(1)
       end
       result = if exit_status == 0
         Invocation::Success.new(nil)
@@ -208,7 +208,7 @@ module OpsWalrus
     # end
 
     def desc(msg)
-      puts msg.mustache(2)
+      puts msg.mustache(1)
     end
 
     # runs the given command
