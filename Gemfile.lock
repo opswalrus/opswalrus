@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.35)
+    opswalrus (1.0.36)
       amazing_print (~> 1.5)
       bcrypt_pbkdf (~> 1.1)
       binding_of_caller (~> 1.0)
