@@ -228,7 +228,7 @@ module OpsWalrus
     end
 
     def host_prop(name)
-      @props["name"]
+      @props[name]
     end
 
   end

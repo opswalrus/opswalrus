@@ -198,14 +198,14 @@ module OpsWalrus
       # invocation_context._invoke(*args, **kwargs)
     end
 
-    def params(*keys, default: nil)
-      keys = keys.map(&:to_s)
-      if keys.empty?
-        @params
-      else
-        @params.dig(*keys) || default
-      end
-    end
+    # def params(*keys, default: nil)
+    #   keys = keys.map(&:to_s)
+    #   if keys.empty?
+    #     @params
+    #   else
+    #     @params.dig(*keys) || default
+    #   end
+    # end
 
     def desc(msg)
       puts msg.mustache

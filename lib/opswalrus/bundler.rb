@@ -116,6 +116,8 @@ module OpsWalrus
 
       destination_package_path = @bundle_dir.join(package_reference.import_resolution_dirname)
 
+      App.instance.log("Downloading #{package_reference} referenced in #{package_file.package_file_path} to #{destination_package_path}")
+
       # we return early here under the assumption that an already downloaded package/version combo will not
       # differ if we download it again multiple times to the same location
       if destination_package_path.exist?

@@ -55,9 +55,9 @@ module OpsWalrus
       @params[key]
     end
 
-    def dig(*keys)
+    def dig(*keys, default: nil)
       # keys = keys.map {|key| key.is_a?(Integer) ? key : key.to_s }
-      @params.dig(*keys)
+      @params.dig(*keys) || default
     end
 
     def method_missing(name, *args, **kwargs, &block)
@@ -141,6 +141,7 @@ module OpsWalrus
         def _invoke(runtime_env, hashlike_params)
           @runtime_env = runtime_env
           @params = InvocationParams.new(hashlike_params)
+          params = @params
           #{ruby_script}
         end
       INVOKE_METHOD
