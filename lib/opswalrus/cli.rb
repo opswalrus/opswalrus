@@ -156,10 +156,11 @@ module OpsWalrus
     long_desc 'Run the specified operation found within the specified package'
     arg 'args', :multiple
     command :run do |c|
-      c.flag [:u, :user], desc: "Specify the user that the operation will run as"
       c.switch :pass, desc: "Prompt for a sudo password"
-      c.flag [:p, :params], desc: "JSON string that represents the input parameters for the operation. The JSON string must conform to the params schema for the operation."
       c.switch :script, desc: "Script mode"
+
+      c.flag [:u, :user], desc: "Specify the user that the operation will run as"
+      c.flag [:p, :params], desc: "Either specify a file that contains JSON OR specify a JSON encoded string. In both cases, the JSON represents the runtime arguments (i.e. the params) for the operation. The JSON string must conform to the params schema for the operation being run."
 
       # dry run
       c.switch :noop, desc: "Perform a dry run"
@@ -171,17 +172,16 @@ module OpsWalrus
         $app.set_log_level(log_level)
 
         hosts = global_options[:hosts]
-        tags = global_options[:tags]
-
         $app.set_inventory_hosts(hosts)
+
+        tags = global_options[:tags]
         $app.set_inventory_tags(tags)
 
         user = options[:user]
-        params = options[:params]
-
-        $app.set_params(params)
-
         $app.set_sudo_user(user) if user
+
+        params = options[:params]
+        $app.set_params(params) if params
 
         id_files = global_options[:id]
         id_files = OpsWalrus.env_specified_age_ids if id_files.empty?

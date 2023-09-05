@@ -1,3 +1,5 @@
+require 'json'
+require 'tempfile'
 
 module OpsWalrus
 
@@ -94,23 +96,50 @@ module OpsWalrus
         remote_run_command_args << args.join(" ")
       end
 
-      unless kwargs.empty?
-        remote_run_command_args << " "
-        remote_run_command_args << kwargs.map do |k, v|
-          case v
-          when Array
-            v.map {|v_element| "#{k}:#{v_element}" }
-          else
-            "#{k}:#{v}"
-          end
-        end.join(" ")
-      end
+      # unless kwargs.empty?
+      #   remote_run_command_args << " "
+      #   remote_run_command_args << kwargs.map do |k, v|
+      #     case v
+      #     when Array
+      #       v.map {|v_element| "#{k}:#{v_element}" }
+      #     else
+      #       "#{k}:#{v}"
+      #     end
+      #   end.join(" ")
+      # end
+      begin
+        json = JSON.dump(kwargs) unless kwargs.empty?
+        if json
+          # write the kwargs to a tempfile
+          json_kwargs_tempfile = Tempfile.create('ops_invoke_kwargs')
+          json_kwargs_tempfile.write(json)
+          json_kwargs_tempfile.close()   # we want to close the file without unlinking so that we can copy it to the remote host before deleting it
 
-      # @host_proxy.run_ops(:run, "--script", remote_run_command_args)
-      if @prompt_for_sudo_password
-        @host_proxy.run_ops(:run, "--pass", remote_run_command_args)
-      else
-        @host_proxy.run_ops(:run, remote_run_command_args)
+          # upload the kwargs file to the remote host
+          json_kwargs_tempfile_path = json_kwargs_tempfile.path.to_pathname
+          remote_json_kwargs_tempfile_basename = json_kwargs_tempfile_path.basename
+          @host_proxy.upload(json_kwargs_tempfile_path, remote_json_kwargs_tempfile_basename)
+        end
+
+        # invoke the ops command on the remote host to run the specified ops script on the remote host
+        ops_command_options = ""
+        ops_command_options << "--pass" if @prompt_for_sudo_password
+        ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
+        retval = if ops_command_options.empty?
+          @host_proxy.run_ops(:run, remote_run_command_args)
+        else
+          @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args)
+        end
+
+        retval
+      ensure
+        if json_kwargs_tempfile
+          json_kwargs_tempfile.close rescue nil
+          File.unlink(json_kwargs_tempfile) rescue nil
+        end
+        if remote_json_kwargs_tempfile_basename
+          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
+        end
       end
     end
   end

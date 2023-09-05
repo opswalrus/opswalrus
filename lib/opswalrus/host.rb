@@ -228,7 +228,7 @@ module OpsWalrus
     end
 
     def host_prop(name)
-      @props[name]
+      @props[name] || @default_props[name]
     end
 
   end
@@ -344,11 +344,11 @@ module OpsWalrus
     def write_temp_ssh_keys_if_needed(keys)
       keys.map do |key_file_path_or_in_memory_key_text|
         if key_file_path_or_in_memory_key_text.is_a? SecretRef    # we're dealing with an in-memory key file; we need to write it to a tempfile
-          tempfile = Tempfile.new
+          tempfile = Tempfile.create
           @tmp_ssh_key_files << tempfile
           key_file_contents = @hosts_file.read_secret(key_file_path_or_in_memory_key_text.to_s)
           tempfile.write(key_file_contents)
-          tempfile.close(false)   # we want to close the file without unlinking so that the editor can write to it
+          tempfile.close   # we want to close the file without unlinking so that the editor can write to it
           tempfile.path
         else    # we're dealing with a reference to a keyfile - a path - so return it
           key_file_path_or_in_memory_key_text
@@ -372,7 +372,7 @@ module OpsWalrus
       @runtime_env = nil
       @sshkit_backend = nil
       @tmp_bundle_root_dir = nil
-      @tmp_ssh_key_files.each {|tmpfile| tmpfile.close() rescue nil; tmpfile.unlink() rescue nil }
+      @tmp_ssh_key_files.each {|tmpfile| tmpfile.close() rescue nil; File.unlink(tmpfile) rescue nil }
       @tmp_ssh_key_files = []
     end
 

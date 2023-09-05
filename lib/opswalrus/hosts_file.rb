@@ -11,9 +11,9 @@ module OpsWalrus
 
   class HostsFile
     def self.edit(file_path)
-      tempfile = Tempfile.new
+      tempfile = Tempfile.create
       begin
-        tempfile.close(false)   # we want to close the file without unlinking so that the editor can write to it
+        tempfile.close   # we want to close the file without unlinking so that the editor can write to it
         HostsFile.new(file_path).decrypt(tempfile.path)
         if TTY::Editor.open(tempfile.path)
           # tempfile.open()
@@ -21,7 +21,7 @@ module OpsWalrus
         end
       ensure
         tempfile.close rescue nil
-        tempfile.unlink   # deletes the temp file
+        File.unlink(tempfile)   # deletes the temp file
       end
     end
 

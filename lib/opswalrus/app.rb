@@ -189,8 +189,13 @@ module OpsWalrus
       @sudo_password
     end
 
-    # params must be a string representation of a JSON object: '{}' | '{"key1": ... , ...}'
-    def set_params(params)
+    # params is a string that specifies a file path OR it is a string representation of a JSON object: '{}' | '{"key1": ... , ...}'
+    def set_params(file_path_or_json_string)
+      params = if File.exist?(file_path_or_json_string)
+        File.read(file_path_or_json_string)
+      else
+        file_path_or_json_string
+      end
       json_hash = JSON.parse(params) rescue nil
       json_hash = json_hash.is_a?(Hash) ? json_hash : nil
 
