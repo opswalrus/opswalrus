@@ -224,7 +224,7 @@ module OpsWalrus
     end
 
     def desc(msg)
-      puts msg.mustache
+      puts msg.mustache(2)
     end
 
     def host_prop(name)

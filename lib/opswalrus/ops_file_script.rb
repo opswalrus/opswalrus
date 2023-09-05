@@ -146,7 +146,7 @@ module OpsWalrus
         end
       INVOKE_METHOD
 
-      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 3
+      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 4
       klass.module_eval(invoke_method_definition, ops_file.ops_file_path.to_s, ops_file.script_line_offset - invoke_method_line_count_prior_to_ruby_script_from_ops_file)
 
       klass
