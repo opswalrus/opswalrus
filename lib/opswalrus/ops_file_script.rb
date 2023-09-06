@@ -141,12 +141,11 @@ module OpsWalrus
         def _invoke(runtime_env, hashlike_params)
           @runtime_env = runtime_env
           @params = InvocationParams.new(hashlike_params)
-          params = @params
           #{ruby_script}
         end
       INVOKE_METHOD
 
-      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 4
+      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 3
       klass.module_eval(invoke_method_definition, ops_file.ops_file_path.to_s, ops_file.script_line_offset - invoke_method_line_count_prior_to_ruby_script_from_ops_file)
 
       klass
@@ -161,6 +160,7 @@ module OpsWalrus
       @ops_file = ops_file
       @script = ruby_script
       @runtime_env = nil    # this is set at the very first line of #_invoke
+      @params = nil         # this is set at the very first line of #_invoke
     end
 
     def backend
@@ -182,6 +182,15 @@ module OpsWalrus
     # The _invoke method is dynamically defined as part of OpsFileScript.define_for
     def _invoke(runtime_env, hashlike_params)
       raise "Not implemented in base class."
+    end
+
+    def params(*keys, default: nil)
+      keys = keys.map(&:to_s)
+      if keys.empty?
+        @params
+      else
+        @params.dig(*keys) || default
+      end
     end
 
     def to_s

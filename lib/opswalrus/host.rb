@@ -224,7 +224,15 @@ module OpsWalrus
     end
 
     def desc(msg)
-      puts msg.mustache(1)
+      puts msg.mustache(2)    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
+    end
+
+    def env(*args, **kwargs)
+      @ops_file_script.env(*args, **kwargs)
+    end
+
+    def params(*args, **kwargs)
+      @ops_file_script.params(*args, **kwargs)
     end
 
     def host_prop(name)
@@ -360,6 +368,10 @@ module OpsWalrus
       @runtime_env = runtime_env
     end
 
+    def set_ops_file_script(ops_file_script)
+      @ops_file_script = ops_file_script
+    end
+
     def set_ssh_session_connection(sshkit_backend)
       @sshkit_backend = sshkit_backend
     end
@@ -370,6 +382,7 @@ module OpsWalrus
 
     def clear_ssh_session
       @runtime_env = nil
+      ops_file_script = nil
       @sshkit_backend = nil
       @tmp_bundle_root_dir = nil
       @tmp_ssh_key_files.each {|tmpfile| tmpfile.close() rescue nil; File.unlink(tmpfile) rescue nil }

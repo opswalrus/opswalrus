@@ -107,7 +107,7 @@ module OpsWalrus
       hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(runtime_env, host) }
       sshkit_hosts = hosts.map(&:sshkit_host)
       sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
-      local_host = self
+      ops_file_script = local_host = self
       # bootstrap_shell_script = BootstrapLinuxHostShellScript
       # on sshkit_hosts do |sshkit_host|
       SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
@@ -116,6 +116,7 @@ module OpsWalrus
 
         begin
           host.set_runtime_env(runtime_env)
+          host.set_ops_file_script(ops_file_script)
           host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
 
           host._bootstrap_host
@@ -172,15 +173,6 @@ module OpsWalrus
       throw :exit_now, result
     end
 
-    def env(*keys)
-      keys = keys.map(&:to_s)
-      if keys.empty?
-        @runtime_env.env
-      else
-        @runtime_env.env.dig(*keys)
-      end
-    end
-
     # currently, import may only be used to import a package that is referenced in the script's package file
     # I may decide to extend this to work with dynamic package references
     #
@@ -198,17 +190,17 @@ module OpsWalrus
       # invocation_context._invoke(*args, **kwargs)
     end
 
-    # def params(*keys, default: nil)
-    #   keys = keys.map(&:to_s)
-    #   if keys.empty?
-    #     @params
-    #   else
-    #     @params.dig(*keys) || default
-    #   end
-    # end
-
     def desc(msg)
       puts msg.mustache(1)
+    end
+
+    def env(*keys)
+      keys = keys.map(&:to_s)
+      if keys.empty?
+        @runtime_env.env
+      else
+        @runtime_env.env.dig(*keys)
+      end
     end
 
     # runs the given command
