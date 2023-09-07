@@ -223,7 +223,7 @@ module OpsWalrus
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
