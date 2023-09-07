@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 export PATH="$HOME/.local/share/rtx/bin:$PATH"    # this is key for activating rtx without running `eval "$($RTX activate bash)"`
+# eval "$(rtx activate bash)"
 RTX="$HOME/.local/share/rtx/bin/rtx"
 rtx_init() { eval "$($RTX activate bash)"; }
 # RTX_RUBY="$HOME/.local/share/rtx/bin/rtx x ruby -- ruby"
@@ -27,7 +28,7 @@ if [ -x $RTX ]; then
       # make sure the latest opswalrus gem is installed
       # todo: figure out how to install this differently, so that test versions will work
       # gem install opswalrus
-      $GEM_CMD install opswalrus
+      # $GEM_CMD install opswalrus
       $RTX reshim
 
       exit 0

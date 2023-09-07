@@ -83,10 +83,8 @@ module OpsWalrus
     def run(runtime_kv_args, params_json_hash: nil)
       params_hash = build_params_hash(runtime_kv_args, params_json_hash: params_json_hash)
 
-      if app.debug?
-        App.instance.trace "Script:"
-        App.instance.trace @entry_point_ops_file.script
-      end
+      App.instance.trace "Script:"
+      App.instance.trace @entry_point_ops_file.script
 
       result = begin
         # update the bundle for the package
@@ -112,7 +110,7 @@ module OpsWalrus
         Invocation::Error.new(e)
       end
 
-      if app.debug? && result.failure?
+      if result.failure?
         App.instance.debug "Ops script error details:"
         App.instance.debug "Error: #{result.value}"
         App.instance.debug "Status code: #{result.exit_status}"

@@ -9,10 +9,10 @@ require_relative 'local_pty_backend'
 module SSHKit
   module Backend
     class Abstract
-      def execute(*args)
-        options = { raise_on_non_zero_exit: false }.merge(args.extract_options!)
-        create_command_and_execute(args, options).success?
-      end
+      # def execute(*args)
+      #   options = { verbosity: :debug, raise_on_non_zero_exit: false }.merge(args.extract_options!)
+      #   create_command_and_execute(args, options).success?
+      # end
 
       def execute_cmd(*args)
         options = { verbosity: :debug, strip: true, raise_on_non_zero_exit: false }.merge(args.extract_options!)
@@ -20,6 +20,12 @@ module SSHKit
       end
     end
   end
+
+  # module Formatter
+  #   class Pretty < Abstract
+
+  #   end
+  # end
 
   module Runner
     class Sequential < Abstract

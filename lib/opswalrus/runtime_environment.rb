@@ -207,12 +207,12 @@ module OpsWalrus
     def resolve_import_reference(origin_ops_file, import_reference)
       resolved_namespace_or_ops_file = case import_reference
       when PackageDependencyReference
-        # puts "root namespace: #{@root_namespace.symbol_table}"
+        # App.instance.trace "root namespace: #{@root_namespace.symbol_table}"
         @root_namespace.resolve_symbol(import_reference.package_reference.import_resolution_dirname)   # returns the Namespace associated with the bundled package import_resolution_dirname (i.e. the local name)
       when DynamicPackageImportReference
         dynamic_package_reference = import_reference.package_reference
         @dynamic_package_additions_memo[dynamic_package_reference] ||= begin
-          # puts "Downloading dynamic package: #{dynamic_package_reference.inspect}"
+          # App.instance.trace "Downloading dynamic package: #{dynamic_package_reference.inspect}"
           App.instance.debug("Downloading dynamic package: #{dynamic_package_reference}")
           dynamically_added_package_dir = @runtime_env.app.bundler.download_git_package(dynamic_package_reference.package_uri, dynamic_package_reference.version)
           dynamically_add_new_package_dir(dynamically_added_package_dir)
@@ -267,15 +267,16 @@ module OpsWalrus
       SSHKit.config.use_format :blackhole
       SSHKit.config.output_verbosity = :info
 
-      if app.debug?
-        SSHKit.config.use_format :pretty
-        # SSHKit.config.use_format :simpletext
-        SSHKit.config.output_verbosity = :debug
-      elsif app.verbose?
-        SSHKit.config.use_format :pretty
-        # SSHKit.config.use_format :dot
-        SSHKit.config.output_verbosity = :info
-      end
+      # if app.info?
+      #   SSHKit.config.use_format :pretty
+      #   SSHKit.config.output_verbosity = :info
+      # elsif app.debug?
+      #   SSHKit.config.use_format :pretty
+      #   SSHKit.config.output_verbosity = :debug
+      # elsif app.trace?
+      #   SSHKit.config.use_format :pretty
+      #   SSHKit.config.output_verbosity = :debug
+      # end
 
       SSHKit::Backend::Netssh.configure do |ssh|
         ssh.pty = true                # necessary for interaction with sudo on the remote host
@@ -290,14 +291,6 @@ module OpsWalrus
         }
       end
       SSHKit::Backend::Netssh.pool.idle_timeout = 1   # seconds
-    end
-
-    def debug?
-      @app.debug?
-    end
-
-    def verbose?
-      @app.verbose?
     end
 
     def local_hostname

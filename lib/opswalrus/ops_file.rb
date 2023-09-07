@@ -47,8 +47,7 @@ module OpsWalrus
     end
 
     def lazy_load_file
-      # puts "OpsFile#lazy_load_file for #{ops_file_path}"
-      # puts caller
+      App.instance.trace "OpsFile#lazy_load_file for #{@ops_file_path}"
       yaml, ruby_script = if @ops_file_path.exist?
         parse(File.read(@ops_file_path))
       end || ["", ""]
@@ -166,7 +165,7 @@ module OpsWalrus
       package_uri = import_str
       if Git.repo?(package_uri)                                                         # ops file has imported an ad-hoc git repo
         destination_package_path = app.bundler.dynamic_package_path_for_git_package(package_uri)
-        # puts "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
+        App.instance.trace "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
         return DynamicPackageImportReference.new(local_name, DynamicPackageReference.new(local_name, package_uri, nil))
       end
 

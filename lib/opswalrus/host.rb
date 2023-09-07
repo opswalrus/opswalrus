@@ -51,7 +51,6 @@ module OpsWalrus
       sibling_symbol_table |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
       sibling_symbol_table.each do |symbol_name|
         unless methods_defined.include? symbol_name
-          # puts "2. defining: #{symbol_name}(...)"
           klass.define_method(symbol_name) do |*args, **kwargs, &block|
             App.instance.trace "resolving implicit import: #{symbol_name}"
             namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
@@ -144,7 +143,7 @@ module OpsWalrus
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
@@ -170,57 +169,83 @@ module OpsWalrus
 
       #cmd = Shellwords.escape(cmd)
 
-      if App.instance.report_mode?
-        puts Style.green("*" * 80)
-        if self.alias
-          print "[#{Style.blue(self.alias)} | #{Style.blue(host)}] "
-        else
-          print "[#{Style.blue(host)}] "
-        end
-        print "#{description}: " if description
-        puts Style.yellow(cmd)
-      end
+      cmd_id = Random.uuid.split('-').first
+      # if App.instance.report_mode?
+      puts Style.green("*" * 80)
+      print Style.blue(host)
+      print " (#{Style.blue(self.alias)})" if self.alias
+      print " | #{Style.magenta(description)}" if description
+      puts
+      print Style.yellow(cmd_id)
+      print Style.green.bold(" > ")
+      puts Style.yellow(cmd)
+
+        # puts Style.green("*" * 80)
+        # if self.alias
+        #   print "[#{Style.blue(self.alias)} | #{Style.blue(host)}] "
+        # else
+        #   print "[#{Style.blue(host)}] "
+        # end
+        # print "#{description}: " if description
+        # puts Style.yellow("[#{cmd_id}] #{cmd}")
+      # end
 
       return unless cmd && !cmd.strip.empty?
 
-      # puts "shell: #{cmd}"
-      # puts "shell: #{cmd.inspect}"
-      # puts "sudo_password: #{sudo_password}"
-
-      if App.instance.dry_run?
+      t1 = Time.now
+      out, err, exit_status = if App.instance.dry_run?
         ["", "", 0]
       else
         sshkit_cmd = execute_cmd(cmd, input: input)
         [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
       end
+      t2 = Time.now
+      seconds = t2 - t1
+
+      if App.instance.info? || log_level == :info
+        puts Style.cyan(out)
+        puts Style.red(err)
+      elsif App.instance.debug? || log_level == :debug
+        puts Style.cyan(out)
+        puts Style.red(err)
+      elsif App.instance.trace? || log_level == :trace
+        puts Style.cyan(out)
+        puts Style.red(err)
+      end
+      print Style.yellow(cmd_id)
+      print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+      if exit_status == 0
+        puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+      else
+        puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+      end
+
+      [out, err, exit_status]
     end
 
-    # def init_brew
-    #   execute('eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"')
-    # end
-
     # runs the specified ops command with the specified command arguments
-    def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true, verbose: false)
-      # e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops bundle unzip tmpops.zip
-      # e.g. /home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops run echo.ops args:foo args:bar
-
-      # cmd = "/home/linuxbrew/.linuxbrew/bin/gem exec -g opswalrus ops"
+    def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true)
       local_hostname_for_remote_host = if self.alias
-        "#{self.alias} | #{host}"
+        "#{host} (#{self.alias})"
       else
         host
       end
 
-      # cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; /home/linuxbrew/.linuxbrew/bin/gem exec --conservative -g opswalrus ops"
       # cmd = "OPS_GEM=\"#{OPS_GEM}\" OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; $OPS_GEM exec --conservative -g opswalrus ops"
       cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}' eval #{OPS_CMD}"
-      cmd << " -v" if verbose
+      if App.instance.info?
+        cmd << " --verbose"
+      elsif App.instance.debug?
+        cmd << " --debug"
+      elsif App.instance.trace?
+        cmd << " --trace"
+      end
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options
       cmd << " #{@tmp_bundle_root_dir}" if in_bundle_root_dir
       cmd << " #{command_arguments}" unless command_arguments.empty?
 
-      shell!(cmd)
+      shell!(cmd, log_level: :info)
     end
 
     def desc(msg)
@@ -391,13 +416,15 @@ module OpsWalrus
 
     def execute(*args, input: nil)
       @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
-        @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: :info)
+        # @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+        @sshkit_backend.capture(*args, interaction_handler: interaction_handler)
       end
     end
 
     def execute_cmd(*args, input: nil)
       @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
-        @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler, verbosity: :info)
+        # @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+        @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler)
       end
     end
 

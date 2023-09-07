@@ -1,5 +1,6 @@
 require 'shellwords'
 require 'stringio'
+require 'random/formatter'
 
 require 'sshkit'
 require 'sshkit/dsl'
@@ -73,28 +74,28 @@ module OpsWalrus
 
           retval
         rescue SSHKit::Command::Failed => e
-          puts "[!] Command failed:"
-          puts e.message
+          App.instance.error "[!] Command failed:"
+          App.instance.error e.message
         rescue Net::SSH::ConnectionTimeout
-          puts "[!] The host '#{host}' not alive!"
+          App.instance.error "[!] The host '#{host}' not alive!"
         rescue Net::SSH::Timeout
-          puts "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
+          App.instance.error "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
         rescue Errno::ECONNREFUSED
-          puts "[!] Incorrect port #{port} for #{host}"
+          App.instance.error "[!] Incorrect port #{port} for #{host}"
         rescue Net::SSH::HostKeyMismatch => e
-          puts "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
-          puts e.message
-          puts "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
+          App.instance.error "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
+          App.instance.error e.message
+          App.instance.error "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
         rescue Net::SSH::AuthenticationFailed
-          puts "Wrong Password: #{host} | #{user}:#{password}"
+          App.instance.error "Wrong Password: #{host} | #{user}:#{password}"
         rescue Net::SSH::Authentication::DisallowedMethod
-          puts "[!] The host '#{host}' doesn't accept password authentication method."
+          App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
         rescue Errno::EHOSTUNREACH => e
-          puts "[!] The host '#{host}' is unreachable"
+          App.instance.error "[!] The host '#{host}' is unreachable"
         rescue => e
-          puts e.class
-          puts e.message
-          puts e.backtrace.join("\n")
+          App.instance.error e.class
+          App.instance.error e.message
+          App.instance.error e.backtrace.join("\n")
         ensure
           host.clear_ssh_session
         end
@@ -124,28 +125,28 @@ module OpsWalrus
 
           retval
         rescue SSHKit::Command::Failed => e
-          puts "[!] Command failed:"
-          puts e.message
+          App.instance.error "[!] Command failed:"
+          App.instance.error e.message
         rescue Net::SSH::ConnectionTimeout
-          puts "[!] The host '#{host}' not alive!"
+          App.instance.error "[!] The host '#{host}' not alive!"
         rescue Net::SSH::Timeout
-          puts "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
+          App.instance.error "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
         rescue Errno::ECONNREFUSED
-          puts "[!] Incorrect port #{port} for #{host}"
+          App.instance.error "[!] Incorrect port #{port} for #{host}"
         rescue Net::SSH::HostKeyMismatch => e
-          puts "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
-          puts e.message
-          puts "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
+          App.instance.error "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
+          App.instance.error e.message
+          App.instance.error "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
         rescue Net::SSH::AuthenticationFailed
-          puts "Wrong Password: #{host} | #{user}:#{password}"
+          App.instance.error "Wrong Password: #{host} | #{user}:#{password}"
         rescue Net::SSH::Authentication::DisallowedMethod
-          puts "[!] The host '#{host}' doesn't accept password authentication method."
+          App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
         rescue Errno::EHOSTUNREACH => e
-          puts "[!] The host '#{host}' is unreachable"
+          App.instance.error "[!] The host '#{host}' is unreachable"
         rescue => e
-          puts e.class
-          puts e.message
-          puts e.backtrace.join("\n")
+          App.instance.error e.class
+          App.instance.error e.message
+          App.instance.error e.backtrace.join("\n")
         ensure
           host.clear_ssh_session
         end
@@ -182,7 +183,6 @@ module OpsWalrus
       package_reference = ops_file.package_file&.dependency(local_package_name)
       raise Error, "Unknown package reference: #{local_package_name}" unless package_reference
       import_reference = PackageDependencyReference.new(local_package_name, package_reference)
-      # puts "import: #{import_reference.inspect}"
       namespace_or_ops_file = @runtime_env.resolve_import_reference(ops_file, import_reference)
       raise SymbolResolutionError, "Import reference '#{import_reference.summary}' not in load path for #{ops_file.ops_file_path}" unless namespace_or_ops_file
       invocation_context = LocalImportInvocationContext.new(@runtime_env, namespace_or_ops_file)
@@ -250,31 +250,55 @@ module OpsWalrus
 
       #cmd = Shellwords.escape(cmd)
 
-      # puts "shell! self: #{self.inspect}"
+      cmd_id = Random.uuid.split('-').first
 
-      if App.instance.report_mode?
-        puts Style.green("*" * 80)
-        print "[#{Style.blue(@runtime_env.local_hostname)}] "
-        print "#{description}: " if description
-        puts Style.yellow(cmd)
-      end
+      # if App.instance.report_mode?
+      puts Style.green("*" * 80)
+      print Style.blue(@runtime_env.local_hostname)
+      print " | #{Style.magenta(description)}" if description
+      puts
+      print Style.yellow(cmd_id)
+      print Style.green.bold(" > ")
+      puts Style.yellow(cmd)
+      # end
 
       return unless cmd && !cmd.strip.empty?
 
-      if App.instance.dry_run?
+      t1 = Time.now
+      out, err, exit_status = if App.instance.dry_run?
         ["", "", 0]
       else
         sshkit_cmd = @runtime_env.handle_input(input) do |interaction_handler|
           # self is a Module instance that is serving as the evaluation context in an instance of a subclass of an Invocation; see Invocation#evaluate
-          backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: :info)
+          # backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+          backend.execute_cmd(cmd, interaction_handler: interaction_handler)
         end
         [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
       end
-    end
+      t2 = Time.now
+      seconds = t2 - t1
 
-    # def init_brew
-    #   execute('eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"')
-    # end
+      if App.instance.info? || log_level == :info
+        puts Style.cyan(out)
+        puts Style.red(err)
+      elsif App.instance.debug? || log_level == :debug
+        puts Style.cyan(out)
+        puts Style.red(err)
+      elsif App.instance.trace? || log_level == :trace
+        puts Style.cyan(out)
+        puts Style.red(err)
+      end
+      print Style.yellow(cmd_id)
+      print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+      if exit_status == 0
+        puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+      else
+        puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+      end
+
+
+      [out, err, exit_status]
+    end
 
   end
 

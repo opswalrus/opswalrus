@@ -99,7 +99,6 @@ end
 # # m = TemplateLang.parse("abc; {{ 'foo' * bar }} def ")
 # m = WalrusLang::Parser.parse("abc; {{ 'foo{{1+2}}' * bar }} def {{ 4 * 4 }}; def")
 # # m = TemplateLang.parse("a{{b{{c}}d}}e{{f}}g{{h{{i{{j{{k{{l}}m{{n}}o}}p}}}}}}")
-# # puts m.dump
 # puts m.render(binding)
 
 # puts("abc {{ 1 + 2 }} def".mustache)

@@ -22,19 +22,17 @@ module OpsWalrus
     on_error do |exception|
       next(false) if exception.is_a? GLI::CustomExit
 
-      puts "catchall exception handler:"
-      puts exception.message
-      puts exception.backtrace.join("\n")
+      $app.fatal "catchall exception handler:"
+      $app.fatal exception.message
+      $app.fatal exception.backtrace.join("\n")
       false   # disable built-in exception handling
     end
 
     program_desc 'ops is an operation runner'
 
-    desc 'Be verbose'
-    switch [:v, :verbose]
-
-    desc 'Turn on debug mode'
-    switch [:d, :debug]
+    switch [:v, :verbose], desc: "Verbose output"
+    switch :debug, desc: "Debug output"
+    switch :trace, desc: "Trace output"
 
     switch :noop, desc: "Perform a dry run"
     switch :dryrun, desc: "Perform a dry run"
@@ -63,8 +61,7 @@ module OpsWalrus
           hosts = global_options[:hosts]
           tags = global_options[:tags]
 
-          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-          $app.set_log_level(log_level)
+          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
           $app.report_inventory(hosts, tags: tags)
         end
@@ -131,8 +128,7 @@ module OpsWalrus
       c.switch :dry_run, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-        $app.set_log_level(log_level)
+        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
         hosts = global_options[:hosts]
         tags = global_options[:tags]
@@ -168,8 +164,7 @@ module OpsWalrus
       c.switch :dry_run, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-        $app.set_log_level(log_level)
+        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
         hosts = global_options[:hosts]
         $app.set_inventory_hosts(hosts)
@@ -213,8 +208,7 @@ module OpsWalrus
       long_desc 'Download and bundle the latest versions of dependencies for the current package'
       c.command :update do |update|
         update.action do |global_options, options, args|
-          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-          $app.set_log_level(log_level)
+          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
           $app.bundle_update
         end
@@ -234,8 +228,7 @@ module OpsWalrus
         unzip.flag [:o, :output], desc: "Specify the output directory"
 
         unzip.action do |global_options, options, args|
-          log_level = global_options[:debug] && :trace || global_options[:verbose] && :debug || :info
-          $app.set_log_level(log_level)
+          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
           output_dir = options[:output]
           zip_file_path = args.first

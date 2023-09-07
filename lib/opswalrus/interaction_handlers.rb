@@ -85,9 +85,6 @@ module OpsWalrus
 
     def debug(message)
       App.instance.debug(message)
-      if [:fatal, :error, :warn, :info, :debug, :trace].include? @log_level
-        SSHKit.config.output.send(@log_level, message)
-      end
     end
 
   end

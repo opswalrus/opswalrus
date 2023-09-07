@@ -44,7 +44,7 @@ module SSHKit
                 handle_data_for_stdout(output, cmd, buffer, stdin, true)
                 stdout.close
               rescue => e
-                puts "closing PTY due to unexpected error: #{e.message}"
+                App.instance.error "closing PTY due to unexpected error: #{e.message}"
                 handle_data_for_stdout(output, cmd, buffer, stdin, true)
                 stdout.close
                 # puts e.message

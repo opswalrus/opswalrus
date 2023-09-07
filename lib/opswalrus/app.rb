@@ -49,7 +49,6 @@ module OpsWalrus
       # @logger.debug Style.yellow("debug"), foo: "bar", baz: {qux: "quux"}
       # @logger.trace Style.yellow("trace"), foo: "bar", baz: {qux: "quux"}
 
-      @verbose = false
       @sudo_user = nil
       @sudo_password = nil
       @identity_file_paths = []
@@ -124,37 +123,52 @@ module OpsWalrus
       @logger.level = log_level
     end
 
-    def verbose?
-      [:info, :debug, :trace].include? @logger.level
-    end
-
-    def debug?
-      [:debug, :trace].include? @logger.level
-    end
-
     def fatal(*args)
       @logger.fatal(*args)
+    end
+    def fatal?
+      @logger.fatal?
     end
 
     def error(*args)
       @logger.error(*args)
     end
+    def error?
+      @logger.error?
+    end
 
     def warn(*args)
       @logger.warn(*args)
     end
+    alias_method :important, :warn    # warn means important
+    def warn?
+      @logger.warn?
+    end
 
-    def log(*args)
+    def info(*args)
       @logger.info(*args)
     end
-    alias_method :info, :log
+    alias_method :log, :info
+    def info?
+      @logger.info?
+    end
 
     def debug(*args)
       @logger.debug(*args)
     end
+    def debug?
+      @logger.debug?
+    end
 
     def trace(*args)
       @logger.trace(*args)
+    end
+    def trace?
+      @logger.trace?
+    end
+
+    def verbose?
+      info? || debug? || trace?
     end
 
     def set_pwd(pwd)
@@ -181,7 +195,6 @@ module OpsWalrus
     def prompt_sudo_password
       password = IO::console.getpass(LOCAL_SUDO_PASSWORD_PROMPT)
       set_sudo_password(password)
-      # puts "sudo password = |#{password}|"
       nil
     end
 
@@ -223,25 +236,19 @@ module OpsWalrus
 
       ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
 
-      if @verbose
-        puts "Running: #{ops_file.ops_file_path}"
-      end
+      debug "Running: #{ops_file.ops_file_path}"
 
       op = OperationRunner.new(self, ops_file)
       result = op.run(operation_kv_args, params_json_hash: @params)
       exit_status = result.exit_status
 
-      if @verbose
-        puts "Op exit_status"
-        puts exit_status
+      debug "Op exit_status"
+      debug exit_status
 
-        puts "Op output"
-        puts JSON.pretty_generate(result.value)
-      end
+      debug "Op output"
+      debug JSON.pretty_generate(result.value)
 
-      if script_mode?
-        puts JSON.pretty_generate(result.value)
-      end
+      puts JSON.pretty_generate(result.value)
 
       exit_status
     ensure

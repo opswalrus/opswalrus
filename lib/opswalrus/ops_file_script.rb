@@ -110,7 +110,7 @@ module OpsWalrus
       sibling_symbol_table_names = Set.new
       sibling_symbol_table_names |= ops_file.dirname.glob("*.ops").map {|ops_file_path| ops_file_path.basename(".ops").to_s }   # OpsFiles
       sibling_symbol_table_names |= ops_file.dirname.glob("*").select(&:directory?).map {|dir_path| dir_path.basename.to_s }    # Namespaces
-      # puts "sibling_symbol_table_names=#{sibling_symbol_table_names}"
+      # App.instance.trace "sibling_symbol_table_names=#{sibling_symbol_table_names}"
       App.instance.trace "methods_defined=#{methods_defined}"
       sibling_symbol_table_names.each do |symbol_name|
         unless methods_defined.include? symbol_name
@@ -134,8 +134,6 @@ module OpsWalrus
       # - @params
       # - #host_proxy_class
       # - #backend
-      # - #debug?
-      # - #verbose?
       # - all the dynamically defined methods in the subclass of Invocation
       invoke_method_definition = <<~INVOKE_METHOD
         def _invoke(runtime_env, hashlike_params)
@@ -165,14 +163,6 @@ module OpsWalrus
 
     def backend
       @runtime_env.pty
-    end
-
-    def debug?
-      @runtime_env.debug?
-    end
-
-    def verbose?
-      @runtime_env.verbose?
     end
 
     def host_proxy_class

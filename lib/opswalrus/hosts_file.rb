@@ -168,20 +168,18 @@ module OpsWalrus
 
     def decrypt(decrypted_file_path = nil)
       decrypted_file_path ||= @hosts_file_path
-      puts "Decrypting #{@hosts_file_path} -> #{decrypted_file_path}."
+      App.instance.debug "Decrypting #{@hosts_file_path} -> #{decrypted_file_path}."
       raise("Path to age identity not specified") if App.instance.identity_file_paths.empty?
       decrypt_secrets!
       File.write(decrypted_file_path, to_yaml)
-      # puts to_yaml
     end
 
     def encrypt(encrypted_file_path = nil)
       encrypted_file_path ||= @hosts_file_path
-      puts "Encrypting #{@hosts_file_path} -> #{encrypted_file_path}."
+      App.instance.debug "Encrypting #{@hosts_file_path} -> #{encrypted_file_path}."
       raise("Path to age identity not specified") if App.instance.identity_file_paths.empty?
       encrypt_secrets!
       File.write(encrypted_file_path, to_yaml)
-      # puts to_yaml
     end
   end
 
@@ -231,7 +229,7 @@ module OpsWalrus
       when Array
         ref.map {|audience_id_reference| dereference(audience_id_reference) }.flatten.compact.uniq
       when Nil
-        puts "ID #{audience_id_reference} does not appear in the list of known public key identifiers"
+        App.instance.warn "ID #{audience_id_reference} does not appear in the list of known public key identifiers"
         nil
       else
         raise "ID reference #{audience_id_reference} corresponds to an unknown type of public key or transitive ID reference: #{ref.inspect}"
@@ -372,7 +370,6 @@ module OpsWalrus
       # coder.represent_scalar(nil, @public_key)
 
       # coder.scalar = @public_key
-      # puts @ids.inspect
       single_line_ids = @ids.join(", ")
       if single_line_ids.size <= 80
         coder['ids'] = single_line_ids
