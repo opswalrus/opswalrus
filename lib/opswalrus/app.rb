@@ -219,9 +219,7 @@ module OpsWalrus
       set_pwd(__FILE__.to_pathname.dirname)
       bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("bootstrap.ops"))
       op = OperationRunner.new(self, bootstrap_ops_file)
-      result = op.run([], params_json_hash: @params)
-      info "Bootstrap results:"
-      info result
+      op.run([], params_json_hash: @params)
     end
 
     # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
