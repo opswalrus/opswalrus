@@ -264,9 +264,10 @@ module OpsWalrus
       out, err, exit_status = if App.instance.dry_run?
         ["", "", 0]
       else
-        sshkit_cmd = @runtime_env.handle_input(input) do |interaction_handler|
+        sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true) do |interaction_handler|
           # self is a Module instance that is serving as the evaluation context in an instance of a subclass of an Invocation; see Invocation#evaluate
           # backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+          App.instance.debug("OpsFileScriptDSL#shell! cmd=#{cmd} with input mappings #{interaction_handler.input_mappings.inspect} given input: #{input.inspect})")
           backend.execute_cmd(cmd, interaction_handler: interaction_handler)
         end
         [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]

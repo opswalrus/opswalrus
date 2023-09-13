@@ -33,7 +33,7 @@ module OpsWalrus
     # when the given block returns, then the temporary mapping is removed from the interaction handler
     #
     # mapping : Hash[ String | Regex => String ] | Nil
-    def with_mapping(mapping = nil, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: false)
+    def with_mapping(mapping = nil, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true)
       new_mapping = inherit_existing_mappings ? @input_mappings : {}
 
       if mapping

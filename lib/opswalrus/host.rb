@@ -427,7 +427,7 @@ module OpsWalrus
       sudo_password_args = {}
       sudo_password_args[:sudo_password] = ssh_password unless ops_prompt_for_sudo_password
       sudo_password_args[:ops_sudo_password] = ssh_password if ops_prompt_for_sudo_password
-      @runtime_env.handle_input(input_mapping, **sudo_password_args) do |interaction_handler|
+      @runtime_env.handle_input(input_mapping, **sudo_password_args, inherit_existing_mappings: false) do |interaction_handler|
         # @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
         App.instance.debug("Host#execute_cmd(#{args.inspect}) with input mappings #{interaction_handler.input_mappings.inspect} given sudo_password_args: #{sudo_password_args.inspect})")
         @sshkit_backend.capture(*args, interaction_handler: interaction_handler)
@@ -443,7 +443,7 @@ module OpsWalrus
       sudo_password_args = {}
       sudo_password_args[:sudo_password] = ssh_password unless ops_prompt_for_sudo_password
       sudo_password_args[:ops_sudo_password] = ssh_password if ops_prompt_for_sudo_password
-      @runtime_env.handle_input(input_mapping, **sudo_password_args) do |interaction_handler|
+      @runtime_env.handle_input(input_mapping, **sudo_password_args, inherit_existing_mappings: false) do |interaction_handler|
         App.instance.debug("Host#execute_cmd(#{args.inspect}) with input mappings #{interaction_handler.input_mappings.inspect} given sudo_password_args: #{sudo_password_args.inspect})")
         @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler)
       end
