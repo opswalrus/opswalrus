@@ -258,8 +258,14 @@ module OpsWalrus
 
     # input_mapping : Hash[ String | Regex => String ]
     # sudo_password : String
-    def handle_input(input_mapping, sudo_password = nil, &block)
-      @interaction_handler.with_mapping(input_mapping, sudo_password, &block)
+    def handle_input(input_mapping, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: false, &block)
+      @interaction_handler.with_mapping(
+        input_mapping,
+        sudo_password: sudo_password,
+        ops_sudo_password: ops_sudo_password,
+        inherit_existing_mappings: inherit_existing_mappings,
+        &block
+      )
     end
 
     # configure sshkit globally
@@ -267,16 +273,10 @@ module OpsWalrus
       SSHKit.config.use_format :blackhole
       SSHKit.config.output_verbosity = :info
 
-      # if app.info?
-      #   SSHKit.config.use_format :pretty
-      #   SSHKit.config.output_verbosity = :info
-      # elsif app.debug?
-      #   SSHKit.config.use_format :pretty
-      #   SSHKit.config.output_verbosity = :debug
-      # elsif app.trace?
-      #   SSHKit.config.use_format :pretty
-      #   SSHKit.config.output_verbosity = :debug
-      # end
+      if app.debug? || app.trace?
+        SSHKit.config.use_format :pretty
+        SSHKit.config.output_verbosity = :debug
+      end
 
       SSHKit::Backend::Netssh.configure do |ssh|
         ssh.pty = true                # necessary for interaction with sudo on the remote host

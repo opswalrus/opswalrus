@@ -7,6 +7,11 @@ require_relative 'local_non_blocking_backend'
 require_relative 'local_pty_backend'
 
 module SSHKit
+  module InteractionHandler
+    class Password < String
+    end
+  end
+
   module Backend
     class Abstract
       # def execute(*args)
@@ -15,17 +20,11 @@ module SSHKit
       # end
 
       def execute_cmd(*args)
-        options = { verbosity: :debug, strip: true, raise_on_non_zero_exit: false }.merge(args.extract_options!)
+        options = { verbosity: :info, strip: true, raise_on_non_zero_exit: false }.merge(args.extract_options!)
         create_command_and_execute(args, options)
       end
     end
   end
-
-  # module Formatter
-  #   class Pretty < Abstract
-
-  #   end
-  # end
 
   module Runner
     class Sequential < Abstract

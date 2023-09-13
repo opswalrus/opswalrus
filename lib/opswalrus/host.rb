@@ -1,5 +1,6 @@
 require "set"
 require "sshkit"
+require "stringio"
 require "tempfile"
 
 require_relative "interaction_handlers"
@@ -30,12 +31,12 @@ module OpsWalrus
             # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
             # therefore, we want to reference the specified ops file with respect to the bundle dir
             when PackageDependencyReference
-              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true, prompt_for_sudo_password: !!ssh_password)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true, ops_prompt_for_sudo_password: !!ssh_password)
 
             # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
             # the specified ops file with respect to the root directory, and not with respect to the bundle dir
             when DirectoryReference, OpsFileReference
-              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, prompt_for_sudo_password: !!ssh_password)
+              RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, ops_prompt_for_sudo_password: !!ssh_password)
             end
 
             invocation_context._invoke(*args, **kwargs)
@@ -56,7 +57,7 @@ module OpsWalrus
             namespace_or_ops_file = @runtime_env.resolve_sibling_symbol(ops_file, symbol_name)
             App.instance.trace "namespace_or_ops_file=#{namespace_or_ops_file.to_s}"
 
-            invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, prompt_for_sudo_password: !!ssh_password)
+            invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, false, ops_prompt_for_sudo_password: !!ssh_password)
             invocation_context._invoke(*args, **kwargs)
           end
           methods_defined << symbol_name
@@ -143,7 +144,7 @@ module OpsWalrus
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil, ops_prompt_for_sudo_password: false)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
@@ -171,14 +172,17 @@ module OpsWalrus
 
       cmd_id = Random.uuid.split('-').first
       # if App.instance.report_mode?
-      puts Style.green("*" * 80)
-      print Style.blue(host)
-      print " (#{Style.blue(self.alias)})" if self.alias
-      print " | #{Style.magenta(description)}" if description
-      puts
-      print Style.yellow(cmd_id)
-      print Style.green.bold(" > ")
-      puts Style.yellow(cmd)
+      output_block = StringIO.open do |io|
+        io.print Style.blue(host)
+        io.print " (#{Style.blue(self.alias)})" if self.alias
+        io.print " | #{Style.magenta(description)}" if description
+        io.puts
+        io.print Style.yellow(cmd_id)
+        io.print Style.green.bold(" > ")
+        io.puts Style.yellow(cmd)
+        io.string
+      end
+      puts output_block
 
         # puts Style.green("*" * 80)
         # if self.alias
@@ -196,35 +200,40 @@ module OpsWalrus
       out, err, exit_status = if App.instance.dry_run?
         ["", "", 0]
       else
-        sshkit_cmd = execute_cmd(cmd, input: input)
+        sshkit_cmd = execute_cmd(cmd, input_mapping: input, ops_prompt_for_sudo_password: ops_prompt_for_sudo_password)
         [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
       end
       t2 = Time.now
       seconds = t2 - t1
 
-      if App.instance.info? || log_level == :info
-        puts Style.cyan(out)
-        puts Style.red(err)
-      elsif App.instance.debug? || log_level == :debug
-        puts Style.cyan(out)
-        puts Style.red(err)
-      elsif App.instance.trace? || log_level == :trace
-        puts Style.cyan(out)
-        puts Style.red(err)
+      output_block = StringIO.open do |io|
+        if App.instance.info? || log_level == :info
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        elsif App.instance.debug? || log_level == :debug
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        elsif App.instance.trace? || log_level == :trace
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        end
+        io.print Style.yellow(cmd_id)
+        io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+        if exit_status == 0
+          io.puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+        else
+          io.puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+        end
+        io.puts Style.green("*" * 80)
+        io.string
       end
-      print Style.yellow(cmd_id)
-      print Style.blue(" | Finished in #{seconds} seconds with exit status ")
-      if exit_status == 0
-        puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-      else
-        puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-      end
+      puts output_block
 
       [out, err, exit_status]
     end
 
     # runs the specified ops command with the specified command arguments
-    def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true)
+    def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true, ops_prompt_for_sudo_password: false)
       local_hostname_for_remote_host = if self.alias
         "#{host} (#{self.alias})"
       else
@@ -245,11 +254,11 @@ module OpsWalrus
       cmd << " #{@tmp_bundle_root_dir}" if in_bundle_root_dir
       cmd << " #{command_arguments}" unless command_arguments.empty?
 
-      shell!(cmd, log_level: :info)
+      shell!(cmd, log_level: :info, ops_prompt_for_sudo_password: ops_prompt_for_sudo_password)
     end
 
     def desc(msg)
-      puts msg.mustache(2)    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
+      puts Style.green(msg.mustache(2))    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
     end
 
     def env(*args, **kwargs)
@@ -414,16 +423,28 @@ module OpsWalrus
       @tmp_ssh_key_files = []
     end
 
-    def execute(*args, input: nil)
-      @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
+    def execute(*args, input_mapping: nil, ops_prompt_for_sudo_password: false)
+      sudo_password_args = {}
+      sudo_password_args[:sudo_password] = ssh_password unless ops_prompt_for_sudo_password
+      sudo_password_args[:ops_sudo_password] = ssh_password if ops_prompt_for_sudo_password
+      @runtime_env.handle_input(input_mapping, **sudo_password_args) do |interaction_handler|
         # @sshkit_backend.capture(*args, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+        App.instance.debug("Host#execute_cmd(#{args.inspect}) with input mappings #{interaction_handler.input_mappings.inspect} given sudo_password_args: #{sudo_password_args.inspect})")
         @sshkit_backend.capture(*args, interaction_handler: interaction_handler)
       end
     end
 
-    def execute_cmd(*args, input: nil)
-      @runtime_env.handle_input(input, ssh_password) do |interaction_handler|
-        # @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
+    def execute_cmd(*args, input_mapping: nil, ops_prompt_for_sudo_password: false)
+      # we only want one of the sudo password interaction handlers:
+      # if we're running an ops script on the remote host and we've passed the --pass flag in our invocation of the ops command on the remote host,
+      #   then we want to specify the sudo password via the ops_sudo_password argument to #handle_input
+      # if we're running a command on the remote host via #shell!, and we aren't running the ops command with the --pass flag,
+      #   then we want to specify the sudo password via the sudo_password argument to #handle_input
+      sudo_password_args = {}
+      sudo_password_args[:sudo_password] = ssh_password unless ops_prompt_for_sudo_password
+      sudo_password_args[:ops_sudo_password] = ssh_password if ops_prompt_for_sudo_password
+      @runtime_env.handle_input(input_mapping, **sudo_password_args) do |interaction_handler|
+        App.instance.debug("Host#execute_cmd(#{args.inspect}) with input mappings #{interaction_handler.input_mappings.inspect} given sudo_password_args: #{sudo_password_args.inspect})")
         @sshkit_backend.execute_cmd(*args, interaction_handler: interaction_handler)
       end
     end

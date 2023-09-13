@@ -191,7 +191,7 @@ module OpsWalrus
     end
 
     def desc(msg)
-      puts msg.mustache(1)
+      puts Style.green(msg.mustache(1))
     end
 
     def env(*keys)
@@ -224,8 +224,6 @@ module OpsWalrus
 
     # returns the tuple: [stdout, stderr, exit_status]
     def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil)
-      # description = nil
-
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
 
       description = desc_or_cmd if cmd || block
@@ -245,22 +243,20 @@ module OpsWalrus
       else
         cmd
       end
-      # cmd = WalrusLang.eval(cmd) if !block && cmd =~ /{{.*}}/
-      # cmd = WalrusLang.render(cmd, block.binding) if block && cmd =~ /{{.*}}/
-
       #cmd = Shellwords.escape(cmd)
 
       cmd_id = Random.uuid.split('-').first
 
-      # if App.instance.report_mode?
-      puts Style.green("*" * 80)
-      print Style.blue(@runtime_env.local_hostname)
-      print " | #{Style.magenta(description)}" if description
-      puts
-      print Style.yellow(cmd_id)
-      print Style.green.bold(" > ")
-      puts Style.yellow(cmd)
-      # end
+      output_block = StringIO.open do |io|
+        io.print Style.blue(@runtime_env.local_hostname)
+        io.print " | #{Style.magenta(description)}" if description
+        io.puts
+        io.print Style.yellow(cmd_id)
+        io.print Style.green.bold(" > ")
+        io.puts Style.yellow(cmd)
+        io.string
+      end
+      puts output_block
 
       return unless cmd && !cmd.strip.empty?
 
@@ -278,24 +274,28 @@ module OpsWalrus
       t2 = Time.now
       seconds = t2 - t1
 
-      if App.instance.info? || log_level == :info
-        puts Style.cyan(out)
-        puts Style.red(err)
-      elsif App.instance.debug? || log_level == :debug
-        puts Style.cyan(out)
-        puts Style.red(err)
-      elsif App.instance.trace? || log_level == :trace
-        puts Style.cyan(out)
-        puts Style.red(err)
+      output_block = StringIO.open do |io|
+        if App.instance.info? || log_level == :info
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        elsif App.instance.debug? || log_level == :debug
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        elsif App.instance.trace? || log_level == :trace
+          io.puts Style.cyan(out)
+          io.puts Style.red(err)
+        end
+        io.print Style.yellow(cmd_id)
+        io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+        if exit_status == 0
+          io.puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+        else
+          io.puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
+        end
+        io.puts Style.green("*" * 80)
+        io.string
       end
-      print Style.yellow(cmd_id)
-      print Style.blue(" | Finished in #{seconds} seconds with exit status ")
-      if exit_status == 0
-        puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-      else
-        puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-      end
-
+      puts output_block
 
       [out, err, exit_status]
     end

@@ -1,6 +1,5 @@
 require 'open3'
 require 'pty'
-require 'fileutils'
 
 module SSHKit
 
@@ -14,6 +13,8 @@ module SSHKit
       def execute_command(cmd)
         output.log_command_start(cmd.with_redaction)
         cmd.started = Time.now
+        # stderr_reader, stderr_writer = IO.pipe
+        # PTY.spawn(cmd.to_command, err: stderr_writer.fileno) do |stdout, stdin, pid|
         PTY.spawn(cmd.to_command) do |stdout, stdin, pid|
           stdout_thread = Thread.new do
             # debug_log = StringIO.new
@@ -30,7 +31,7 @@ module SSHKit
                 # puts "nonblocking1. buffer=#{buffer} partial_buffer=#{partial_buffer}"
                 buffer = handle_data_for_stdout(output, cmd, buffer, stdin, false)
                 # puts "nonblocking2. buffer=#{buffer} partial_buffer=#{partial_buffer}"
-              rescue IO::WaitReadable, Errno::EAGAIN, Errno::EWOULDBLOCK
+              rescue IO::WaitReadable, Errno::EAGAIN, Errno::EWOULDBLOCK, IO::EAGAINWaitReadable
                 # puts "blocking. buffer=#{buffer} partial_buffer=#{partial_buffer}"
                 buffer = handle_data_for_stdout(output, cmd, buffer, stdin, true)
                 IO.select([stdout])
@@ -60,33 +61,46 @@ module SSHKit
           end
           stdout_thread.join
           _pid, status = Process.wait2(pid)
+          # stderr_writer.close
+          # output.log_command_data(cmd, :stderr, stderr_reader.read)
           cmd.exit_status = status.exitstatus
           output.log_command_exit(cmd)
         end
+      # ensure
+      #   stderr_reader.close
       end
 
       # returns [complete lines, new buffer]
       def split_buffer(buffer)
-        lines = buffer.split(/(\r\n)|\r|\n/)
+        # lines = buffer.split(/(\r\n)|\r|\n/)
+        lines = buffer.lines("\r\n").flat_map {|line| line.lines("\r") }.flat_map {|line| line.lines("\n") }
         buffer = lines.pop
         [lines, buffer]
       end
 
+      # todo: we want to allow for cmd.on_stdout to invoke the interactionhandlers, but we want our interaction handler
+      # to be able to indicate that a password has been emitted, and therefore should be read back and omitted from the
+      # logged output because, per https://toasterlovin.com/using-the-pty-class-to-test-interactive-cli-apps-in-ruby/,
+      # the behavior of a PTY is to echo back any input was typed into the pseudoterminal, which means we will need to
+      # discard the input that we type in for password prompts, to ensure that the password is not logged as part
+      # of the stdout that we get back as we read from stdout of the spawned process
       def handle_data_for_stdout(output, cmd, buffer, stdin, is_blocked)
-        # puts "handling data for stdout: #{buffer}"
-
         # we're blocked on reading, so let's process the buffer
         lines, buffer = split_buffer(buffer)
         lines.each do |line|
-          # puts "1" * 80
-          # puts line
-          cmd.on_stdout(stdin, line)
+          ::OpsWalrus::App.instance.trace("line=|>#{line}<|")
+          emitted_response_from_interaction_handler = cmd.on_stdout(stdin, line)
+          if emitted_response_from_interaction_handler.is_a?(::SSHKit::InteractionHandler::Password)
+            ::OpsWalrus::App.instance.trace("emitted password #{emitted_response_from_interaction_handler}")
+          end
           output.log_command_data(cmd, :stdout, line)
         end
         if is_blocked && buffer
-          # puts "2" * 80
-          # puts buffer
-          cmd.on_stdout(stdin, buffer)
+          ::OpsWalrus::App.instance.trace("line=|>#{buffer}<|")
+          emitted_response_from_interaction_handler = cmd.on_stdout(stdin, buffer)
+          if emitted_response_from_interaction_handler.is_a?(::SSHKit::InteractionHandler::Password)
+            ::OpsWalrus::App.instance.trace("emitted password #{emitted_response_from_interaction_handler}")
+          end
           output.log_command_data(cmd, :stdout, buffer)
           buffer = ""
         end

@@ -26,7 +26,7 @@ module OpsWalrus
   end
 
   class RemoteImportInvocationContext < ImportInvocationContext
-    def initialize(runtime_env, host_proxy, namespace_or_ops_file, is_invocation_a_call_to_package_in_bundle_dir = false, prompt_for_sudo_password: nil)
+    def initialize(runtime_env, host_proxy, namespace_or_ops_file, is_invocation_a_call_to_package_in_bundle_dir = false, ops_prompt_for_sudo_password: nil)
       @runtime_env = runtime_env
       @host_proxy = host_proxy
       @initial_namespace_or_ops_file = @namespace_or_ops_file = namespace_or_ops_file
@@ -39,7 +39,7 @@ module OpsWalrus
         @namespace_or_ops_file.basename
       end
       @method_chain = [initial_method_name]
-      @prompt_for_sudo_password = prompt_for_sudo_password
+      @ops_prompt_for_sudo_password = ops_prompt_for_sudo_password
     end
 
     def method_missing(name, *args, **kwargs, &block)
@@ -123,12 +123,12 @@ module OpsWalrus
 
         # invoke the ops command on the remote host to run the specified ops script on the remote host
         ops_command_options = ""
-        ops_command_options << "--pass" if @prompt_for_sudo_password
+        ops_command_options << "--pass" if @ops_prompt_for_sudo_password
         ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
         retval = if ops_command_options.empty?
-          @host_proxy.run_ops(:run, remote_run_command_args)
+          @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         else
-          @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args)
+          @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         end
 
         retval
