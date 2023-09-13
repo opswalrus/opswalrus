@@ -81,6 +81,7 @@ module OpsWalrus
       @_host.to_s
     end
 
+    # returns [stdout, stderr, exit_status]
     def _bootstrap_host
       # copy over bootstrap shell script
       # io = StringIO.new(bootstrap_shell_script)
@@ -89,8 +90,10 @@ module OpsWalrus
       io.close
       raise Error, "Unable to upload bootstrap shell script to remote host #{to_s} (alias=#{self.alias})" unless upload_success
       @_host.execute(:chmod, "755", "tmpopsbootstrap.sh")
-      @_host.execute(:sh, "tmpopsbootstrap.sh")
-      @_host.execute(:rm, "-f", "tmpopsbootstrap.sh")
+      sshkit_cmd = @_host.execute_cmd(:sh, "tmpopsbootstrap.sh")
+      [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+    ensure
+      @_host.execute(:rm, "-f", "tmpopsbootstrap.sh") rescue nil
     end
 
     def _zip_copy_and_run_ops_bundle(local_host, block)
