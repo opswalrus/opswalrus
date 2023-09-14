@@ -99,14 +99,14 @@ module OpsWalrus
         App.instance.error "[!] Command failed: #{e.message}"
       rescue Error => e
         App.instance.error "Error: Ops script crashed."
-        App.instance.error e
-        # App.instance.error e.backtrace.take(5).join("\n")
+        App.instance.error e.message
+        App.instance.error e.backtrace.take(10).join("\n")
         Invocation::Error.new(e)
       rescue => e
         App.instance.error "Unhandled Error: Ops script crashed."
         App.instance.error e.class
-        App.instance.error e
-        # App.instance.error e.backtrace.take(10).join("\n")
+        App.instance.error e.message
+        App.instance.error e.backtrace.take(10).join("\n")
         Invocation::Error.new(e)
       end
 

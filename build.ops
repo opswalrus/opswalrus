@@ -30,7 +30,9 @@ end
 TEMPLATE
 
 puts "Write version.rb for version #{version}"
-core.template.write(path: "./lib/opswalrus/version.rb", template: template, variables: {version: version})
+core.template.write template: template,
+                    variables: {version: version},
+                    to: "./lib/opswalrus/version.rb"
 
 sh("Build gem") { 'gem build opswalrus.gemspec' }
 

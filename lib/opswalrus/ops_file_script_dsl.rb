@@ -153,6 +153,10 @@ module OpsWalrus
       end
     end
 
+    def current_dir
+      File.dirname(File.realpath(@runtime_ops_file_path)).to_pathname
+    end
+
     def inventory(*args, **kwargs)
       tags = args.map(&:to_s)
 
@@ -192,6 +196,14 @@ module OpsWalrus
 
     def desc(msg)
       puts Style.green(msg.mustache(1))
+    end
+
+    def warn(msg)
+      puts Style.yellow(msg.mustache(1))
+    end
+
+    def debug(msg)
+      puts msg.mustache(1) if App.instance.debug? || App.instance.trace?
     end
 
     def env(*keys)
@@ -245,10 +257,26 @@ module OpsWalrus
       end
       #cmd = Shellwords.escape(cmd)
 
+      report_on(@runtime_env.local_hostname, description, cmd, log_level: log_level) do
+        if App.instance.dry_run?
+          ["", "", 0]
+        else
+          sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true) do |interaction_handler|
+            # puts "self=#{self.class.superclass}"
+            # self is an instance of one of the dynamically defined subclasses of OpsFileScript
+            App.instance.debug("OpsFileScriptDSL#shell! cmd=#{cmd} with input mappings #{interaction_handler.input_mappings.inspect} given input: #{input.inspect})")
+            backend.execute_cmd(cmd, interaction_handler: interaction_handler)
+          end
+          [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+        end
+      end
+    end
+
+    def report_on(hostname, description = nil, cmd, log_level: nil)
       cmd_id = Random.uuid.split('-').first
 
       output_block = StringIO.open do |io|
-        io.print Style.blue(@runtime_env.local_hostname)
+        io.print Style.blue(hostname)
         io.print " | #{Style.magenta(description)}" if description
         io.puts
         io.print Style.yellow(cmd_id)
@@ -258,20 +286,8 @@ module OpsWalrus
       end
       puts output_block
 
-      return unless cmd && !cmd.strip.empty?
-
       t1 = Time.now
-      out, err, exit_status = if App.instance.dry_run?
-        ["", "", 0]
-      else
-        sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true) do |interaction_handler|
-          # self is a Module instance that is serving as the evaluation context in an instance of a subclass of an Invocation; see Invocation#evaluate
-          # backend.execute_cmd(cmd, interaction_handler: interaction_handler, verbosity: SSHKit.config.output_verbosity)
-          App.instance.debug("OpsFileScriptDSL#shell! cmd=#{cmd} with input mappings #{interaction_handler.input_mappings.inspect} given input: #{input.inspect})")
-          backend.execute_cmd(cmd, interaction_handler: interaction_handler)
-        end
-        [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
-      end
+      out, err, exit_status = yield
       t2 = Time.now
       seconds = t2 - t1
 

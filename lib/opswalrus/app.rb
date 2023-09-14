@@ -249,6 +249,9 @@ module OpsWalrus
       puts JSON.pretty_generate(result.value)
 
       exit_status
+    rescue Error => e
+      puts "Error: #{e.message}"
+      1
     ensure
       FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
     end

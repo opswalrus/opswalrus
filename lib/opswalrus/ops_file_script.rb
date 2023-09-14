@@ -139,11 +139,12 @@ module OpsWalrus
         def _invoke(runtime_env, hashlike_params)
           @runtime_env = runtime_env
           @params = InvocationParams.new(hashlike_params)
+          @runtime_ops_file_path = __FILE__
           #{ruby_script}
         end
       INVOKE_METHOD
 
-      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 3
+      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 4
       klass.module_eval(invoke_method_definition, ops_file.ops_file_path.to_s, ops_file.script_line_offset - invoke_method_line_count_prior_to_ruby_script_from_ops_file)
 
       klass
@@ -157,8 +158,9 @@ module OpsWalrus
     def initialize(ops_file, ruby_script)
       @ops_file = ops_file
       @script = ruby_script
-      @runtime_env = nil    # this is set at the very first line of #_invoke
-      @params = nil         # this is set at the very first line of #_invoke
+      @runtime_env = nil              # this is set at the very first line of #_invoke
+      @params = nil                   # this is set at the very first line of #_invoke
+      @runtime_ops_file_path = nil    # this is set at the very first line of #_invoke
     end
 
     def backend
@@ -181,6 +183,10 @@ module OpsWalrus
       else
         @params.dig(*keys) || default
       end
+    end
+
+    def inspect
+      "OpsFileScript[#{ops_file.ops_file_path}]"
     end
 
     def to_s

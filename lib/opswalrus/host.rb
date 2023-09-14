@@ -264,6 +264,14 @@ module OpsWalrus
       puts Style.green(msg.mustache(2))    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
     end
 
+    def warn(msg)
+      puts Style.yellow(msg.mustache(2))    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
+    end
+
+    def debug(msg)
+      puts msg.mustache(2) if App.instance.debug? || App.instance.trace?    # we use two here, because one stack frame accounts for the call from the ops script into HostProxy#desc
+    end
+
     def env(*args, **kwargs)
       @ops_file_script.env(*args, **kwargs)
     end
@@ -419,7 +427,7 @@ module OpsWalrus
 
     def clear_ssh_session
       @runtime_env = nil
-      ops_file_script = nil
+      @ops_file_script = nil
       @sshkit_backend = nil
       @tmp_bundle_root_dir = nil
       @tmp_ssh_key_files.each {|tmpfile| tmpfile.close() rescue nil; File.unlink(tmpfile) rescue nil }
