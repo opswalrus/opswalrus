@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.48)
+    opswalrus (1.0.49)
       bcrypt_pbkdf (~> 1.1)
       binding_of_caller (~> 1.0)
       citrus (~> 3.0)
