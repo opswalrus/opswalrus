@@ -1,15 +1,5 @@
 # ssh_noprep in: :sequence do
 ssh_noprep do
   puts "Bootstrapping #{to_s} (alias=#{self.alias})"
-  stdout, stderr, exit_status = _bootstrap_host()
-  if exit_status == 0
-    puts "Success - #{to_s} (alias=#{self.alias})"
-  else
-    stdout_report = stdout.lines.last(3).map {|line| "        #{line}" }.join()
-    stderr_report = stderr.lines.last(3).map {|line| "        #{line}" }.join()
-    report = "Failure - #{to_s} (alias=#{self.alias})"
-    report << "\n    stdout:\n#{stdout_report}" unless stdout_report.empty?
-    report << "\n    stderr:\n#{stderr_report}" unless stderr_report.empty?
-    puts report
-  end
+  _bootstrap_host(true)
 end

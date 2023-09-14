@@ -120,8 +120,12 @@ module OpsWalrus
           host.set_ops_file_script(ops_file_script)
           host.set_ssh_session_connection(self)  # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
 
-          host._bootstrap_host
-          retval = host._zip_copy_and_run_ops_bundle(local_host, block)
+          stdout, stderr, exit_status = host._bootstrap_host(false)
+          retval = if exit_status == 0
+            host._zip_copy_and_run_ops_bundle(local_host, block)
+          else
+            puts "Failed to bootstrap #{host}. Unable to run operation."
+          end
 
           retval
         rescue SSHKit::Command::Failed => e

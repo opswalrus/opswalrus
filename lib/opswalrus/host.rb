@@ -82,7 +82,7 @@ module OpsWalrus
     end
 
     # returns [stdout, stderr, exit_status]
-    def _bootstrap_host
+    def _bootstrap_host(print_report = true)
       # copy over bootstrap shell script
       # io = StringIO.new(bootstrap_shell_script)
       io = File.open(__FILE__.to_pathname.dirname.join("bootstrap.sh"))
@@ -91,7 +91,23 @@ module OpsWalrus
       raise Error, "Unable to upload bootstrap shell script to remote host #{to_s} (alias=#{self.alias})" unless upload_success
       @_host.execute(:chmod, "755", "tmpopsbootstrap.sh")
       sshkit_cmd = @_host.execute_cmd(:sh, "tmpopsbootstrap.sh")
-      [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+
+      stdout, stderr, exit_status = [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
+
+      if print_report
+        if exit_status == 0
+          puts "Bootstrap success - #{to_s} (alias=#{self.alias})"
+        else
+          stdout_report = stdout.lines.last(3).map {|line| "        #{line}" }.join()
+          stderr_report = stderr.lines.last(3).map {|line| "        #{line}" }.join()
+          report = "Bootstrap failure - #{to_s} (alias=#{self.alias})"
+          report << "\n    stdout:\n#{stdout_report}" unless stdout_report.empty?
+          report << "\n    stderr:\n#{stderr_report}" unless stderr_report.empty?
+          puts report
+        end
+      end
+
+      [stdout, stderr, exit_status]
     ensure
       @_host.execute(:rm, "-f", "tmpopsbootstrap.sh") rescue nil
     end
