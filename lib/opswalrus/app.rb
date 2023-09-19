@@ -31,7 +31,7 @@ module OpsWalrus
       @instance ||= new(*args)
     end
 
-    LOCAL_SUDO_PASSWORD_PROMPT = "[ops] Enter sudo password to run sudo in local environment: "
+    LOCAL_SUDO_PASSWORD_PROMPT = "[opswalrus] Please enter sudo password to run sudo in local environment: "
 
 
     attr_reader :local_hostname
@@ -238,6 +238,9 @@ module OpsWalrus
       end
       puts output
       exit_status
+    rescue Error => e
+      puts "Error: #{e.message}"
+      1
     end
 
     # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]

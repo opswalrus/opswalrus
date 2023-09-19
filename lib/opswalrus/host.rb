@@ -371,7 +371,7 @@ module OpsWalrus
     def ssh_password
       password = @props["password"] || @default_props["password"]
       password ||= begin
-        @props["password"] = IO::console.getpass("[opswalrus] Please enter the ssh password to connect to #{ssh_user}@#{host}:#{ssh_port}: ")
+        @props["password"] = IO::console.getpass("[opswalrus] Please enter ssh password to connect to #{ssh_user}@#{host}:#{ssh_port}: ")
       end
       dereference_secret_if_needed(password)
     end
