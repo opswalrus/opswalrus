@@ -1,0 +1,9 @@
+params:
+  command: string
+...
+ssh_noprep in: :sequence do
+# ssh_noprep do
+  command = params.command
+  desc "Running `#{command}` on #{to_s} (alias=#{self.alias})"
+  shell(command)
+end

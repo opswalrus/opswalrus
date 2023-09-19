@@ -38,6 +38,10 @@ class String
   def string!(default: "")
     self
   end
+
+  def integer!(default: 0)
+    to_i
+  end
 end
 
 class Integer
@@ -47,6 +51,10 @@ class Integer
 
   def string!(default: "")
     to_s
+  end
+
+  def integer!(default: 0)
+    self
   end
 end
 
@@ -58,6 +66,10 @@ class Float
   def string!(default: "")
     to_s
   end
+
+  def integer!(default: 0)
+    to_i
+  end
 end
 
 class NilClass
@@ -66,6 +78,10 @@ class NilClass
   end
 
   def string!(default: "")
+    default
+  end
+
+  def integer!(default: 0)
     default
   end
 end
@@ -78,6 +94,10 @@ class TrueClass
   def string!(default: "")
     to_s
   end
+
+  def integer!(default: 0)
+    default
+  end
 end
 
 class FalseClass
@@ -87,5 +107,9 @@ class FalseClass
 
   def string!(default: "")
     to_s
+  end
+
+  def integer!(default: 0)
+    default
   end
 end

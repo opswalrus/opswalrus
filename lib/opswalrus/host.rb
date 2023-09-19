@@ -300,32 +300,56 @@ module OpsWalrus
       @props[name] || @default_props[name]
     end
 
+    def ssh_session
+      @sshkit_backend
+    end
+
   end
 
   class Host
     include HostDSL
 
-    def initialize(name_or_ip_or_cidr, tags = [], props = {}, default_props = {}, hosts_file)
-      @name_or_ip_or_cidr = name_or_ip_or_cidr
+    # ssh_uri is a string of the form:
+    # - hostname
+    # - user@hostname
+    # - hostname:port
+    # - user@hostname:port
+    def initialize(ssh_uri, tags = [], props = {}, default_props = {}, hosts_file = nil)
+      @ssh_uri = ssh_uri
+      @host = nil
       @tags = tags.to_set
       @props = props.is_a?(Array) ? {"tags" => props} : props.to_h
       @default_props = default_props
       @hosts_file = hosts_file
       @tmp_ssh_key_files = []
+      parse_ssh_uri!
+    end
+
+    def parse_ssh_uri!
+      if match = /^\s*((?<user>.*?)@)?(?<host>.*?)(:(?<port>[0-9]+))?\s*$/.match(@ssh_uri)
+        @host ||= match[:host] if match[:host]
+        @props["user"] ||= match[:user] if match[:user]
+        @props["port"] ||= match[:port].to_i if match[:port]
+      end
     end
 
     # secret_ref: SecretRef
     # returns the decrypted value referenced by the supplied SecretRef
     def dereference_secret_if_needed(secret_ref)
       if secret_ref.is_a? SecretRef
+        raise "Host #{self} not read from hosts file so no secrets can be dereferenced." unless @hosts_file
         @hosts_file.read_secret(secret_ref.to_s)
       else
         secret_ref
       end
     end
 
+    def ssh_uri
+      @ssh_uri
+    end
+
     def host
-      @name_or_ip_or_cidr
+      @host
     end
 
     def alias
@@ -337,7 +361,7 @@ module OpsWalrus
     end
 
     def ssh_port
-      @props["port"] || @default_props["port"]
+      @props["port"] || @default_props["port"] || 22
     end
 
     def ssh_user
@@ -346,6 +370,9 @@ module OpsWalrus
 
     def ssh_password
       password = @props["password"] || @default_props["password"]
+      password ||= begin
+        @props["password"] = IO::console.getpass("[opswalrus] Please enter the ssh password to connect to #{ssh_user}@#{host}:#{ssh_port}: ")
+      end
       dereference_secret_if_needed(password)
     end
 
@@ -354,7 +381,7 @@ module OpsWalrus
     end
 
     def hash
-      @name_or_ip_or_cidr.hash
+      @ssh_uri.hash
     end
 
     def eql?(other)
@@ -362,7 +389,7 @@ module OpsWalrus
     end
 
     def to_s
-      @name_or_ip_or_cidr
+      @ssh_uri
     end
 
     def tag!(*tags)
@@ -396,7 +423,7 @@ module OpsWalrus
       # the various options for net-ssh are captured in https://net-ssh.github.io/ssh/v1/chapter-2.html
       @sshkit_host ||= ::SSHKit::Host.new({
         hostname: host,
-        port: ssh_port || 22,
+        port: ssh_port,
         user: ssh_user || raise("No ssh user specified to connect to #{host}"),
         password: ssh_password,
         keys: keys
@@ -415,6 +442,7 @@ module OpsWalrus
         if key_file_path_or_in_memory_key_text.is_a? SecretRef    # we're dealing with an in-memory key file; we need to write it to a tempfile
           tempfile = Tempfile.create
           @tmp_ssh_key_files << tempfile
+          raise "Host #{self} not read from hosts file so no secrets can be written." unless @hosts_file
           key_file_contents = @hosts_file.read_secret(key_file_path_or_in_memory_key_text.to_s)
           tempfile.write(key_file_contents)
           tempfile.close   # we want to close the file without unlinking so that the editor can write to it

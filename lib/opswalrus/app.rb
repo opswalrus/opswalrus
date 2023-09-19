@@ -217,9 +217,27 @@ module OpsWalrus
 
     def bootstrap()
       set_pwd(__FILE__.to_pathname.dirname)
-      bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("bootstrap.ops"))
+      bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_bootstrap.ops"))
       op = OperationRunner.new(self, bootstrap_ops_file)
       op.run([], params_json_hash: @params)
+    end
+
+    def shell(command)
+      set_pwd(__FILE__.to_pathname.dirname)
+      shell_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_shell.ops"))
+      op = OperationRunner.new(self, shell_ops_file)
+      puts "running #{command}"
+      result = op.run([], params_json_hash: {"command" => command})
+      puts "result class=#{result.class}"
+      exit_status = result.exit_status
+      stdout = JSON.pretty_generate(result.value)
+      output = if exit_status == 0
+        Style.green(stdout)
+      else
+        Style.red(stdout)
+      end
+      puts output
+      exit_status
     end
 
     # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
@@ -227,12 +245,14 @@ module OpsWalrus
     #   to the load path
     # otherwise, copy the
     # returns the exit status code that the script should terminate with
-    def run(package_operation_and_args)
+    def run(package_operation_and_args, update_bundle: false)
       return 0 if package_operation_and_args.empty?
 
       ops_file_path, operation_kv_args, tmp_bundle_root_dir = get_entry_point_ops_file_and_args(package_operation_and_args)
 
       ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
+
+      bundler.update if update_bundle
 
       debug "Running: #{ops_file.ops_file_path}"
 

@@ -250,6 +250,9 @@ module OpsWalrus
       # host will be managed by the local ScopedMappingInteractionHandler running within the instance of the ops command
       # process on the remote host, and the command host will not have any further opportunity to interactively enter
       # any prompts on the remote host
+      # All that to say that this initial mapping handler will be used to fill in the sudo password for commands running
+      # on the remote host, and it will be the instance of the ops tool running on the remote host that will interactively
+      # fill out the password on the remote host
       interaction_handler_mapping_for_sudo_password = ScopedMappingInteractionHandler.mapping_for_sudo_password(sudo_password)
       @interaction_handler = ScopedMappingInteractionHandler.new(interaction_handler_mapping_for_sudo_password)
 

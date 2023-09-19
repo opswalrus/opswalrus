@@ -4,6 +4,7 @@ module OpsWalrus
 
   class ScopedMappingInteractionHandler
     STANDARD_SUDO_PASSWORD_PROMPT = /\[sudo\] password for .*?:\s*/
+    STANDARD_SSH_PASSWORD_PROMPT = /.*?@.*?'s password:\s*/
 
     attr_accessor :input_mappings   # Hash[ String | Regex => String ]
 
@@ -11,6 +12,14 @@ module OpsWalrus
     def initialize(mapping, log_level = nil)
       @log_level = log_level
       @input_mappings = mapping
+    end
+
+    # sudo_password : String | Nil
+    def self.mapping_for_ssh_password_prompt(ssh_password)
+      password_response = ssh_password && ::SSHKit::InteractionHandler::Password.new("#{ssh_password}\n")
+      {
+        STANDARD_SSH_PASSWORD_PROMPT => password_response,
+      }
     end
 
     # sudo_password : String | Nil
@@ -51,7 +60,7 @@ module OpsWalrus
       end
       new_mapping.merge!(password_mappings) if password_mappings
 
-      if new_mapping.empty?
+      if new_mapping.empty? || new_mapping == @input_mappings
         yield self
       else
         yield ScopedMappingInteractionHandler.new(new_mapping, @log_level)

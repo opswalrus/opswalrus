@@ -131,9 +131,9 @@ module OpsWalrus
         $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
 
         hosts = global_options[:hosts]
-        tags = global_options[:tags]
-
         $app.set_inventory_hosts(hosts)
+
+        tags = global_options[:tags]
         $app.set_inventory_tags(tags)
 
         id_files = global_options[:id]
@@ -148,10 +148,52 @@ module OpsWalrus
       end
     end
 
+    desc "Run a shell command on one or more remote hosts"
+    long_desc 'Run a shell command on one or more remote hosts'
+    command :shell do |c|
+      c.switch :pass, desc: "Prompt for a sudo password"
+      c.flag [:u, :user], desc: "Specify the user that the operation will run as"
+
+      # dry run
+      c.switch :noop, desc: "Perform a dry run"
+      c.switch :dryrun, desc: "Perform a dry run"
+      c.switch :dry_run, desc: "Perform a dry run"
+
+      c.action do |global_options, options, args|
+        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+
+        hosts = global_options[:hosts]
+        $app.set_inventory_hosts(hosts)
+
+        tags = global_options[:tags]
+        $app.set_inventory_tags(tags)
+
+        user = options[:user]
+        $app.set_sudo_user(user) if user
+
+        id_files = global_options[:id]
+        id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+        $app.set_identity_files(id_files)
+
+        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        $app.dry_run! if dry_run
+
+        if options[:pass]
+          $app.prompt_sudo_password
+        end
+
+        exit_status = $app.shell(args.join(" "))
+
+        exit_now!("error", exit_status) unless exit_status == 0
+      end
+    end
+
     desc 'Run an operation from a package'
     long_desc 'Run the specified operation found within the specified package'
     arg 'args', :multiple
     command :run do |c|
+      c.switch [:b, :bundle], desc: "Update bundle prior to running the specified operation"
       c.switch :pass, desc: "Prompt for a sudo password"
       c.switch :script, desc: "Script mode"
 
@@ -194,7 +236,7 @@ module OpsWalrus
           $app.script_mode!
         end
 
-        exit_status = $app.run(args)
+        exit_status = $app.run(args, update_bundle: options[:bundle])
 
         exit_now!("error", exit_status) unless exit_status == 0
       end

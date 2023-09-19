@@ -27,7 +27,7 @@ if [ -x $RTX ]; then
 
       # make sure the latest opswalrus gem is installed
       # todo: figure out how to install this differently, so that test versions will work
-      gem install opswalrus
+      # gem install opswalrus
       # $GEM_CMD install opswalrus
       $RTX reshim
 
@@ -57,7 +57,7 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo needrestart -q -r a
   sudo needrestart -q -r a
   sudo needrestart -q -r a
-elif echo $OS | grep -q 'fedora'; then
+elif echo $OS | grep -q 'fedora|rocky'; then
   sudo dnf groupinstall -y 'Development Tools'
   sudo dnf -yq install procps-ng curl file git
 elif echo $OS | grep -q 'arch'; then
@@ -120,6 +120,9 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo needrestart -q -r a
 elif echo $OS | grep -q 'fedora'; then
   # from https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
+  sudo yum install -y gcc patch bzip2 openssl-devel libyaml-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel
+elif echo $OS | grep -q 'fedora'; then
+  sudo yum --enablerepo=powertools install -y libyaml-devel libffi-devel
   sudo yum install -y gcc patch bzip2 openssl-devel libyaml-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel
 elif echo $OS | grep -q 'arch'; then
   # from https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
