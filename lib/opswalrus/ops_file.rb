@@ -163,7 +163,7 @@ module OpsWalrus
       end
 
       package_uri = import_str
-      if Git.repo?(package_uri)                                                         # ops file has imported an ad-hoc git repo
+      if package_uri = Git.repo?(package_uri)                                                         # ops file has imported an ad-hoc git repo
         destination_package_path = app.bundler.dynamic_package_path_for_git_package(package_uri)
         App.instance.trace "DynamicPackageImportReference: #{local_name} -> #{destination_package_path}"
         return DynamicPackageImportReference.new(local_name, DynamicPackageReference.new(local_name, package_uri, nil))

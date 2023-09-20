@@ -72,10 +72,10 @@ module OpsWalrus
       self
     end
 
-    def bundle!
-      bundler_for_package = Bundler.new(dirname)
-      bundler_for_package.update
-    end
+    # def bundle!
+    #   bundler_for_package = Bundler.new(dirname)
+    #   bundler_for_package.update
+    # end
 
     def dirname
       @package_file_path.dirname

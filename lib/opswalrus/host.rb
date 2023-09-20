@@ -30,7 +30,7 @@ module OpsWalrus
             invocation_context = case import_reference
             # we know we're dealing with a package dependency reference, so we want to run an ops file contained within the bundle directory,
             # therefore, we want to reference the specified ops file with respect to the bundle dir
-            when PackageDependencyReference
+            when PackageDependencyReference, DynamicPackageImportReference
               RemoteImportInvocationContext.new(@runtime_env, self, namespace_or_ops_file, true, ops_prompt_for_sudo_password: !!ssh_password)
 
             # we know we're dealing with a directory reference or OpsFile reference outside of the bundle dir, so we want to reference
@@ -261,12 +261,12 @@ module OpsWalrus
 
       # cmd = "OPS_GEM=\"#{OPS_GEM}\" OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; $OPS_GEM exec --conservative -g opswalrus ops"
       cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}' eval #{OPS_CMD}"
-      if App.instance.info?
-        cmd << " --verbose"
+      if App.instance.trace?
+        cmd << " --trace"
       elsif App.instance.debug?
         cmd << " --debug"
-      elsif App.instance.trace?
-        cmd << " --trace"
+      elsif App.instance.info?
+        cmd << " --verbose"
       end
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options

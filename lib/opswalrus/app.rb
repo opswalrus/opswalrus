@@ -56,7 +56,7 @@ module OpsWalrus
       @inventory_tag_selections = []
       @params = nil
       @pwd = pwd.to_pathname
-      @bundler = Bundler.new(@pwd)
+      @bundler = Bundler.new(self, @pwd)
       @local_hostname = "localhost"
       @mode = :report     # :report | :script
       @dry_run = false
@@ -173,7 +173,7 @@ module OpsWalrus
 
     def set_pwd(pwd)
       @pwd = pwd.to_pathname
-      @bundler = Bundler.new(@pwd)
+      @bundler = Bundler.new(self, @pwd)
     end
 
     def pwd

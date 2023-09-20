@@ -57,7 +57,10 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo needrestart -q -r a
   sudo needrestart -q -r a
   sudo needrestart -q -r a
-elif echo $OS | grep -q 'fedora|rocky'; then
+elif echo $OS | grep -q 'fedora'; then
+  sudo dnf groupinstall -y 'Development Tools'
+  sudo dnf -yq install procps-ng curl file git
+elif echo $OS | grep -q 'rocky'; then
   sudo dnf groupinstall -y 'Development Tools'
   sudo dnf -yq install procps-ng curl file git
 elif echo $OS | grep -q 'arch'; then
@@ -121,7 +124,7 @@ if echo $OS | grep -q 'ubuntu'; then
 elif echo $OS | grep -q 'fedora'; then
   # from https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
   sudo yum install -y gcc patch bzip2 openssl-devel libyaml-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel
-elif echo $OS | grep -q 'fedora'; then
+elif echo $OS | grep -q 'rocky'; then
   sudo yum --enablerepo=powertools install -y libyaml-devel libffi-devel
   sudo yum install -y gcc patch bzip2 openssl-devel libyaml-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel
 elif echo $OS | grep -q 'arch'; then
@@ -153,6 +156,9 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo needrestart -q -r a
 elif echo $OS | grep -q 'fedora'; then
   sudo dnf -yq install age
+elif echo $OS | grep -q 'rocky'; then
+  sudo curl -o /usr/local/bin/age https://dl.filippo.io/age/latest?for=linux/amd64
+  sudo chmod 755 /usr/local/bin/age
 elif echo $OS | grep -q 'arch'; then
   sudo pacman -Syu --noconfirm --needed age
 else

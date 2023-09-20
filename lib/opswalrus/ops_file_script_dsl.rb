@@ -127,7 +127,7 @@ module OpsWalrus
             host.set_ops_file_script(ops_file_script)
             host.set_ssh_session_connection(sshkit_backend)
 
-            stdout, stderr, exit_status = host._bootstrap_host(false)
+            stdout, stderr, exit_status = host._bootstrap_host(true)
             retval = if exit_status == 0
               host._zip_copy_and_run_ops_bundle(local_host, block)
             else

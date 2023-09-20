@@ -11,9 +11,11 @@ module OpsWalrus
 
     include Traversable
 
+    attr_accessor :app
     attr_accessor :pwd
 
-    def initialize(working_directory_path)
+    def initialize(app, working_directory_path)
+      @app = app
       @pwd = working_directory_path.to_pathname
       @bundle_dir = @pwd.join(BUNDLE_DIR)
     end
@@ -53,20 +55,25 @@ module OpsWalrus
     #   bundler_for_package.include_directory_in_bundle_as_self_pkg(pwd)
     # end
 
-    def update
+    def update()
       delete_pwd_bundle_directory
       ensure_pwd_bundle_directory_exists
 
       package_yaml_files = pwd.glob("./**/package.yaml") - pwd.glob("./**/#{BUNDLE_DIR}/**/package.yaml")
       package_files_within_pwd = package_yaml_files.map {|path| PackageFile.new(path.realpath) }
 
-      download_dependency_tree(*package_files_within_pwd)
+      download_package_dependency_tree(package_files_within_pwd)
+
+      ops_files = pwd.glob("./**/*.ops") - pwd.glob("./**/#{BUNDLE_DIR}/**/*.ops")
+      ops_files_within_pwd = ops_files.map {|path| OpsFile.new(@app, path.realpath) }
+
+      download_import_dependencies(ops_files_within_pwd)
     end
 
-    # downloads all transitive package dependencies associated with ops_files
+    # downloads all transitive package dependencies associated with ops_files_and_package_files
     # all downloaded packages are placed into @bundle_dir
-    def download_dependency_tree(*ops_files_and_package_files)
-      package_files = ops_files_and_package_files.map(&:package_file).compact.uniq
+    def download_package_dependency_tree(*ops_files_and_package_files)
+      package_files = ops_files_and_package_files.flatten.map(&:package_file).compact.uniq
 
       package_files.each do |root_package_file|
         pre_order_traverse(root_package_file) do |package_file|
@@ -78,11 +85,29 @@ module OpsWalrus
       end
     end
 
+    def download_import_dependencies(*ops_files)
+      ops_files.flatten.each do |ops_file|
+        ops_file.imports.each do |local_name, import_reference|
+          case import_reference
+          when PackageDependencyReference, DynamicPackageImportReference
+            package_reference = import_reference.package_reference
+            download_package(ops_file.dirname, ops_file.ops_file_path, package_reference)
+          when DirectoryReference
+            # noop
+          when OpsFileReference
+            # noop
+          end
+        end
+      end
+    end
+
     # returns the array of the destination directories that the packages that ops_file depend on were downloaded to
     # e.g. [dir_path1, dir_path2, dir_path3, ...]
     def download_package_dependencies(package_file)
+      containing_directory = package_file.containing_directory
+      package_file_source = package_file.package_file_path
       package_file.dependencies.map do |local_name, package_reference|
-        download_package(package_file, package_reference)
+        download_package(containing_directory, package_file_source, package_reference)
       end
     end
 
@@ -107,7 +132,9 @@ module OpsWalrus
 
     # This method downloads a package_url that is a dependency referenced in the specified package_file
     # returns the destination directory that the package was downloaded to
-    def download_package(package_file, package_reference)
+    #
+    # relative_base_path is the relative base path that any relative file paths captured in the package_reference should be evaluated relative to
+    def download_package(relative_base_path, source_of_package_reference, package_reference)
       ensure_pwd_bundle_directory_exists
 
       local_name = package_reference.local_name
@@ -116,22 +143,25 @@ module OpsWalrus
 
       destination_package_path = @bundle_dir.join(package_reference.import_resolution_dirname)
 
-      App.instance.log("Downloading #{package_reference} referenced in #{package_file.package_file_path} to #{destination_package_path}")
+      # App.instance.log("Downloading #{package_reference} referenced in #{package_file.package_file_path} to #{destination_package_path}")
+      App.instance.log("Downloading #{package_reference} referenced in #{source_of_package_reference} to #{destination_package_path}")
 
       # we return early here under the assumption that an already downloaded package/version combo will not
       # differ if we download it again multiple times to the same location
       if destination_package_path.exist?
-        App.instance.log("Skipping #{package_reference} referenced in #{package_file.package_file_path} since it already has been downloaded to #{destination_package_path}")
+        App.instance.log("Skipping #{package_reference} referenced in #{source_of_package_reference} since it already has been downloaded to #{destination_package_path}")
         return destination_package_path
       end
       # FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
 
-      download_package_contents(package_file, local_name, package_url, version, destination_package_path)
+      # download_package_contents(package_file.containing_directory, local_name, package_url, version, destination_package_path)
+      download_package_contents(relative_base_path, local_name, package_url, version, destination_package_path)
 
       destination_package_path
     end
 
-    def download_package_contents(package_file, local_name, package_url, version, destination_package_path)
+    # relative_base_path is a Pathname
+    def download_package_contents(relative_base_path, local_name, package_url, version, destination_package_path)
       package_path = package_url.to_pathname
       package_path = package_path.to_s.gsub(/^~/, Dir.home).to_pathname
       App.instance.trace("download_package_contents #{package_path}")
@@ -148,7 +178,7 @@ module OpsWalrus
         end
       end
       if package_path.relative?                                                          # relative path reference
-        rebased_path = package_file.containing_directory.join(package_path)
+        rebased_path = relative_base_path.join(package_path)
         if rebased_path.exist?
           return case
           when rebased_path.directory?
