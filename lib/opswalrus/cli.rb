@@ -189,6 +189,37 @@ module OpsWalrus
       end
     end
 
+    desc "Reboot one or more remote hosts"
+    long_desc 'Reboot one or more remote hosts'
+    command :reboot do |c|
+      # dry run
+      c.switch :noop, desc: "Perform a dry run"
+      c.switch :dryrun, desc: "Perform a dry run"
+      c.switch :dry_run, desc: "Perform a dry run"
+
+      c.action do |global_options, options, args|
+        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+
+        hosts = global_options[:hosts]
+        $app.set_inventory_hosts(hosts)
+
+        tags = global_options[:tags]
+        $app.set_inventory_tags(tags)
+
+        id_files = global_options[:id]
+        id_files = OpsWalrus.env_specified_age_ids if id_files.empty?
+
+        $app.set_identity_files(id_files)
+
+        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        $app.dry_run! if dry_run
+
+        exit_status = $app.reboot()
+
+        exit_now!("error", exit_status) unless exit_status == 0
+      end
+    end
+
     desc 'Run an operation from a package'
     long_desc 'Run the specified operation found within the specified package'
     arg 'args', :multiple

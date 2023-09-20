@@ -243,6 +243,26 @@ module OpsWalrus
       1
     end
 
+    def reboot()
+      set_pwd(__FILE__.to_pathname.dirname)
+      shell_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_reboot.ops"))
+      op = OperationRunner.new(self, shell_ops_file)
+      result = op.run([], params_json_hash: @params)
+      puts "result class=#{result.class}"
+      exit_status = result.exit_status
+      stdout = JSON.pretty_generate(result.value)
+      output = if exit_status == 0
+        Style.green(stdout)
+      else
+        Style.red(stdout)
+      end
+      puts output
+      exit_status
+    rescue Error => e
+      puts "Error: #{e.message}"
+      1
+    end
+
     # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
     # if the first argument is the path to a .ops file, then treat it as a local path, and add the containing package
     #   to the load path

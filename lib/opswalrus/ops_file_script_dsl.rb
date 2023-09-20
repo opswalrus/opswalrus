@@ -55,6 +55,9 @@ module OpsWalrus
       sshkit_hosts = hosts.map(&:sshkit_host)
       sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
       ops_file_script = local_host = self
+
+      results_lock = Thread::Mutex.new
+      results = {}
       # on sshkit_hosts do |sshkit_host|
       SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
         # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
@@ -73,65 +76,8 @@ module OpsWalrus
             # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
             retval = host.instance_exec(local_host, &block)    # local_host is passed as the argument to the block
 
-            retval
-          rescue SSHKit::Command::Failed => e
-            App.instance.error "[!] Command failed:"
-            App.instance.error e.message
-          rescue Net::SSH::ConnectionTimeout
-            App.instance.error "[!] The host '#{host}' not alive!"
-          rescue Net::SSH::Timeout
-            App.instance.error "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
-          rescue Errno::ECONNREFUSED
-            App.instance.error "[!] Incorrect port #{host.ssh_port} for #{host}"
-          rescue Net::SSH::HostKeyMismatch => e
-            App.instance.error "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
-            App.instance.error e.message
-            App.instance.error "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
-          rescue Net::SSH::AuthenticationFailed
-            App.instance.error "Wrong Password: #{host} | #{host.ssh_user}:#{host.ssh_password}"
-          rescue Net::SSH::Authentication::DisallowedMethod
-            App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
-          rescue Errno::EHOSTUNREACH => e
-            App.instance.error "[!] The host '#{host}' is unreachable"
-          rescue => e
-            App.instance.error e.class
-            App.instance.error e.message
-            App.instance.error e.backtrace.join("\n")
-          ensure
-            host.clear_ssh_session
-          end
-        end # runtime_env.handle_input
-      end # SSHKit::Coordinator
-    end # def ssh
-
-    def ssh(*args, **kwargs, &block)
-      runtime_env = @runtime_env
-
-      hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(runtime_env, host) }
-      sshkit_hosts = hosts.map(&:sshkit_host)
-      sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
-      ops_file_script = local_host = self
-      # bootstrap_shell_script = BootstrapLinuxHostShellScript
-      # on sshkit_hosts do |sshkit_host|
-      SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
-        # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
-        host = sshkit_host_to_ops_host_map[sshkit_host]
-        sshkit_backend = self   # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
-
-        ssh_password_interaction_mapping = host.ssh_password && ScopedMappingInteractionHandler.mapping_for_ssh_password_prompt(host.ssh_password)
-        runtime_env.handle_input(ssh_password_interaction_mapping, inherit_existing_mappings: true) do |interaction_handler|
-          App.instance.debug("OpsFileScriptDSL#ssh input mappings #{interaction_handler.input_mappings.inspect}")
-
-          begin
-            host.set_runtime_env(runtime_env)
-            host.set_ops_file_script(ops_file_script)
-            host.set_ssh_session_connection(sshkit_backend)
-
-            stdout, stderr, exit_status = host._bootstrap_host(true)
-            retval = if exit_status == 0
-              host._zip_copy_and_run_ops_bundle(local_host, block)
-            else
-              puts "Failed to bootstrap #{host}. Unable to run operation."
+            results_lock.synchronize do
+              results[host] = retval
             end
 
             retval
@@ -163,6 +109,76 @@ module OpsWalrus
           end
         end # runtime_env.handle_input
       end # SSHKit::Coordinator
+      results
+    end # def ssh
+
+    def ssh(*args, **kwargs, &block)
+      runtime_env = @runtime_env
+
+      hosts = inventory(*args, **kwargs).map {|host| host_proxy_class.new(runtime_env, host) }
+      sshkit_hosts = hosts.map(&:sshkit_host)
+      sshkit_host_to_ops_host_map = sshkit_hosts.zip(hosts).to_h
+      ops_file_script = local_host = self
+
+      results_lock = Thread::Mutex.new
+      results = {}
+      # bootstrap_shell_script = BootstrapLinuxHostShellScript
+      # on sshkit_hosts do |sshkit_host|
+      SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
+        # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
+        host = sshkit_host_to_ops_host_map[sshkit_host]
+        sshkit_backend = self   # self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh
+
+        ssh_password_interaction_mapping = host.ssh_password && ScopedMappingInteractionHandler.mapping_for_ssh_password_prompt(host.ssh_password)
+        runtime_env.handle_input(ssh_password_interaction_mapping, inherit_existing_mappings: true) do |interaction_handler|
+          App.instance.debug("OpsFileScriptDSL#ssh input mappings #{interaction_handler.input_mappings.inspect}")
+
+          begin
+            host.set_runtime_env(runtime_env)
+            host.set_ops_file_script(ops_file_script)
+            host.set_ssh_session_connection(sshkit_backend)
+
+            stdout, stderr, exit_status = host._bootstrap_host(true)
+            retval = if exit_status == 0
+              host._zip_copy_and_run_ops_bundle(local_host, block)
+            else
+              puts "Failed to bootstrap #{host}. Unable to run operation."
+            end
+
+            results_lock.synchronize do
+              results[host] = retval
+            end
+
+            retval
+          rescue SSHKit::Command::Failed => e
+            App.instance.error "[!] Command failed:"
+            App.instance.error e.message
+          rescue Net::SSH::ConnectionTimeout
+            App.instance.error "[!] The host '#{host}' not alive!"
+          rescue Net::SSH::Timeout
+            App.instance.error "[!] The host '#{host}' disconnected/timeouted unexpectedly!"
+          rescue Errno::ECONNREFUSED
+            App.instance.error "[!] Incorrect port #{host.ssh_port} for #{host}"
+          rescue Net::SSH::HostKeyMismatch => e
+            App.instance.error "[!] The host fingerprint does not match the last observed fingerprint for #{host}"
+            App.instance.error e.message
+            App.instance.error "You might try `ssh-keygen -f ~/.ssh/known_hosts -R \"#{host}\"`"
+          rescue Net::SSH::AuthenticationFailed
+            App.instance.error "Wrong Password: #{host} | #{host.ssh_user}:#{host.ssh_password}"
+          rescue Net::SSH::Authentication::DisallowedMethod
+            App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
+          rescue Errno::EHOSTUNREACH => e
+            App.instance.error "[!] The host '#{host}' is unreachable"
+          rescue => e
+            App.instance.error e.class
+            App.instance.error e.message
+            App.instance.error e.backtrace.join("\n")
+          ensure
+            host.clear_ssh_session
+          end
+        end # runtime_env.handle_input
+      end # SSHKit::Coordinator
+      results
     end # def ssh
 
     def current_dir
@@ -261,7 +277,7 @@ module OpsWalrus
         else
           offset = 3    # 3, because 1 references the stack frame corresponding to the caller of WalrusLang.eval,
                         # 2 references the stack frame corresponding to the caller of shell!,
-                        # and 3 references the stack frame corresponding to teh caller of either sh/sh?/shell
+                        # and 3 references the stack frame corresponding to the caller of either sh/sh?/shell
           WalrusLang.eval(cmd, offset)
         end
       else

@@ -143,6 +143,57 @@ module OpsWalrus
 
 
   module HostDSL
+    # delay: integer?     # default: 1 - 1 second delay before reboot
+    # sync: boolean?      # default: true - wait for the remote host to become available again before returning success/failure
+    # timeout: integer?   # default: 300 - 300 seconds (5 minutes)
+    def reboot(delay: 1, sync: true, timeout: 300)
+      delay = 1 if delay < 1
+
+      desc "Rebooting #{to_s} (alias=#{self.alias})"
+      reboot_success = sh? 'sudo /bin/sh -c "(sleep {{ delay }} && reboot) &"'.mustache
+      puts reboot_success
+
+      reconnect_time = nil
+      reconnect_success = if sync
+        desc "Waiting for #{to_s} (alias=#{self.alias}) to finish rebooting"
+        initial_reconnect_delay = delay + 10
+        sleep initial_reconnect_delay
+
+        reconnected = false
+        give_up = false
+        t1 = Time.now
+        until reconnected || give_up
+          begin
+            reconnected = sh?('true')
+            # while trying to reconnect, we expect the following exceptions:
+            # 1. Net::SSH::Disconnect < Net::SSH::Exception with message: "connection closed by remote host"
+            # 2. Errno::ECONNRESET < SystemCallError with message: "Connection reset by peer"
+          rescue Net::SSH::Disconnect, Errno::ECONNRESET => e
+            # noop; we expect these while we're trying to reconnect
+          rescue => e
+            puts "#{e.class} < #{e.class.superclass}"
+            puts e.message
+            puts e.backtrace.take(5).join("\n")
+          end
+
+          wait_time_elapsed_in_seconds = Time.now - t1
+          give_up = wait_time_elapsed_in_seconds > timeout
+          sleep 5
+        end
+        reconnect_time = initial_reconnect_delay + (Time.now - t1)
+        reconnected
+      else
+        false
+      end
+
+      {
+        success: reboot_success && (sync == reconnect_success),
+        rebooted: reboot_success,
+        reconnected: reconnect_success,
+        reboot_duration: reconnect_time
+      }
+    end
+
     # runs the given command
     # returns the stdout from the command
     def sh(desc_or_cmd = nil, cmd = nil, input: nil, &block)
@@ -179,7 +230,7 @@ module OpsWalrus
         else
           offset = 3    # 3, because 1 references the stack frame corresponding to the caller of WalrusLang.eval,
                         # 2 references the stack frame corresponding to the caller of shell!,
-                        # and 3 references the stack frame corresponding to teh caller of either sh/sh?/shell
+                        # and 3 references the stack frame corresponding to the caller of either sh/sh?/shell
           WalrusLang.eval(cmd, offset)
         end
       else
