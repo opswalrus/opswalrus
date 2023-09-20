@@ -127,11 +127,11 @@ module OpsWalrus
       retval = instance_exec(local_host, &block)    # local_host is passed as the argument to the block
 
       # todo: cleanup
-      # if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
-      #   @_host.execute(:rm, "-rf", "tmpops.zip", tmp_bundle_root_dir)
-      # else
-      #   @_host.execute(:rm, "-rf", "tmpops.zip")
-      # end
+      if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
+        @_host.execute(:rm, "-rf", "tmpops.zip", tmp_bundle_root_dir)
+      else
+        @_host.execute(:rm, "-rf", "tmpops.zip")
+      end
 
       retval
     end

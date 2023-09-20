@@ -138,9 +138,9 @@ module OpsWalrus
           File.unlink(json_kwargs_tempfile) rescue nil
         end
         # todo: make sure this cleanup is present
-        # if remote_json_kwargs_tempfile_basename
-        #   @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
-        # end
+        if remote_json_kwargs_tempfile_basename
+          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
+        end
       end
     end
   end
