@@ -100,7 +100,7 @@ module OpsWalrus
 
       stdout, stderr, exit_status = [sshkit_cmd.full_stdout, sshkit_cmd.full_stderr, sshkit_cmd.exit_status]
 
-      if print_report
+      if print_report && App.instance.info?
         if exit_status == 0
           puts "Bootstrap success - #{to_s} (alias=#{self.alias})"
         else

@@ -4,6 +4,8 @@ params:
 ...
 ssh in: :sequence do
 # ssh_noprep do
+  # puts params.stringify_keys!
   # desc "Running `#{params.ops_file.ops_file_path} #{params.operation_kv_args.join(' ')}` on #{to_s} (alias=#{self.alias})"
+  # run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true, ops_prompt_for_sudo_password: false)
   _invoke_remote(params.ops_file, *params.operation_kv_args)
 end

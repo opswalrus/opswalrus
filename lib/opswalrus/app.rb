@@ -266,7 +266,7 @@ module OpsWalrus
       internal_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_run_remote.ops"))
 
       op = OperationRunner.new(self, internal_ops_file)
-      result = op.run([], params_json_hash: {ops_file: ops_file, operation_kv_args: operation_kv_args})
+      result = op.run([], params_json_hash: {ops_file: ops_file, operation_kv_args: operation_kv_args}.stringify_keys)
       exit_status = result.exit_status
 
       debug "Op exit_status"
