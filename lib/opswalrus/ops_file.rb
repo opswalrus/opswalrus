@@ -233,6 +233,13 @@ module OpsWalrus
     #   end
     # end
 
+    # if ops_file_path is /home/david/sync/projects/ops/davidinfra/opswalrus_bundle/pkg_https---github.com-opswalrus-core_version_/file/exists.ops
+    # and the @app.pwd is /home/david/sync/projects/ops/davidinfra
+    # then this returns opswalrus_bundle/pkg_https---github.com-opswalrus-core_version_/file/exists.ops
+    def relative_path_to_app_pwd
+      @ops_file_path.relative_path_from(@app.pwd)
+    end
+
     # "/home/david/sync/projects/ops/ops/core/host/info.ops" => "/home/david/sync/projects/ops/ops/core/host"
     def dirname
       @ops_file_path.dirname

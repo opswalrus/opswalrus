@@ -56,7 +56,11 @@ module OpsWalrus
     # end
 
     def update()
-      delete_pwd_bundle_directory
+      # delete_pwd_bundle_directory   # this was causing problems when we do: ops run -r -b ... because a dynamic package reference was being
+                                      # downloaded to the bundle dir, and then update was being called afterward, which was blowing away
+                                      # the entire bundle dir, so when the bundle dir was copied to the remote host, the ops file being
+                                      # invoked was not present on the remote host, since it had never been copied over as a result
+                                      # of the bundle dir being blown away after the dynamic package reference had been downloaded
       ensure_pwd_bundle_directory_exists
 
       package_yaml_files = pwd.glob("./**/package.yaml") - pwd.glob("./**/#{BUNDLE_DIR}/**/package.yaml")
@@ -204,6 +208,8 @@ module OpsWalrus
 
       destination_package_path ||= dynamic_package_path_for_git_package(package_url, version)
 
+      App.instance.debug "Download git package #{package_url} version #{version.inspect} to #{destination_package_path}"
+
       return destination_package_path if destination_package_path.exist?
 
       if version
@@ -211,6 +217,8 @@ module OpsWalrus
       else
         ::Git.clone(package_url, destination_package_path, config: ['submodule.recurse=true'])
       end
+
+      App.instance.debug "Downloaded git package #{package_url} version #{version.inspect} to #{destination_package_path}"
 
       destination_package_path
     end

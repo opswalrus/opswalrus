@@ -82,10 +82,9 @@ module OpsWalrus
     end
 
     def _invoke_remote(ops_file, *args, **kwargs)
-      puts "boom"
-      is_invocation_a_call_to_package_in_bundle_dir = true
-      invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, ops_file, is_invocation_a_call_to_package_in_bundle_dir, ops_prompt_for_sudo_password: !!ssh_password)
-      invocation_context._invoke(*args, **kwargs)
+      App.instance.debug "Remove invoke #{ops_file.relative_path_to_app_pwd} on host `#{to_s}` with args:\n  #{args.inspect}\nkwargs:\n  #{kwargs.inspect}"
+
+      RemoteInvocation.new(self, ops_file, ops_prompt_for_sudo_password: !!ssh_password).invoke(*args, **kwargs)
     end
 
     # returns [stdout, stderr, exit_status]

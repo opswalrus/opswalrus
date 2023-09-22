@@ -48,6 +48,7 @@ module OpsWalrus
 
 
   module OpsFileScriptDSL
+    # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
     def ssh_noprep(*args, **kwargs, &block)
       runtime_env = @runtime_env
 
@@ -112,6 +113,7 @@ module OpsWalrus
       results
     end # def ssh
 
+    # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
     def ssh(*args, **kwargs, &block)
       runtime_env = @runtime_env
 
@@ -122,7 +124,6 @@ module OpsWalrus
 
       results_lock = Thread::Mutex.new
       results = {}
-      # bootstrap_shell_script = BootstrapLinuxHostShellScript
       # on sshkit_hosts do |sshkit_host|
       SSHKit::Coordinator.new(sshkit_hosts).each(in: kwargs[:in] || :parallel) do |sshkit_host|
         # in this context, self is an instance of one of the subclasses of SSHKit::Backend::Abstract, e.g. SSHKit::Backend::Netssh

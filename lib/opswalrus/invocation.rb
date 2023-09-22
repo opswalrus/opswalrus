@@ -196,4 +196,62 @@ module OpsWalrus
 
   end
 
+
+
+
+
+  class RemoteInvocation
+    def initialize(host_proxy, ops_file, ops_prompt_for_sudo_password: nil)
+      @host_proxy = host_proxy
+      @ops_file = ops_file
+      @ops_prompt_for_sudo_password = ops_prompt_for_sudo_password
+    end
+
+    def invoke(*args, **kwargs)
+      # when there are args or kwargs, then the method invocation represents an attempt to run an OpsFile on a remote host,
+      # so we want to build up a command and send it to the remote host via HostDSL#run_ops
+      remote_run_command_args = @ops_file.relative_path_to_app_pwd.to_s
+
+      unless args.empty?
+        remote_run_command_args << " "
+        remote_run_command_args << args.join(" ")
+      end
+
+      begin
+        json = JSON.dump(kwargs) unless kwargs.empty?
+        if json
+          # write the kwargs to a tempfile
+          json_kwargs_tempfile = Tempfile.create('ops_invoke_kwargs')
+          json_kwargs_tempfile.write(json)
+          json_kwargs_tempfile.close()   # we want to close the file without unlinking so that we can copy it to the remote host before deleting it
+
+          # upload the kwargs file to the remote host
+          json_kwargs_tempfile_path = json_kwargs_tempfile.path.to_pathname
+          remote_json_kwargs_tempfile_basename = json_kwargs_tempfile_path.basename
+          @host_proxy.upload(json_kwargs_tempfile_path, remote_json_kwargs_tempfile_basename)
+        end
+
+        # invoke the ops command on the remote host to run the specified ops script on the remote host
+        ops_command_options = ""
+        ops_command_options << "--pass" if @ops_prompt_for_sudo_password
+        ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
+        retval = if ops_command_options.empty?
+          @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
+        else
+          @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
+        end
+
+        retval
+      ensure
+        if json_kwargs_tempfile
+          json_kwargs_tempfile.close rescue nil
+          File.unlink(json_kwargs_tempfile) rescue nil
+        end
+        # todo: make sure this cleanup is present
+        if remote_json_kwargs_tempfile_basename
+          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
+        end
+      end
+    end
+  end
 end
