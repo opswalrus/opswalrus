@@ -1,5 +1,7 @@
 require 'json'
 require 'pathname'
+require 'active_support'
+require 'active_support/core_ext/hash'
 
 class String
   def escape_single_quotes

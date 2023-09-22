@@ -38,11 +38,11 @@ module OpsWalrus
     attr_reader :identity_file_paths
 
     def initialize(pwd = Dir.pwd)
-      SemanticLogger.default_level = :info
+      SemanticLogger.default_level = :warn
       # SemanticLogger.add_appender(file_name: 'development.log', formatter: :color)   # Log to a file, and use the colorized formatter
       SemanticLogger.add_appender(io: $stdout, formatter: :color)       # Log errors and above to standard error:
       @logger = SemanticLogger[OpsWalrus]    # Logger.new($stdout, level: Logger::INFO)
-      @logger.level = :info    # , :trace or 'trace'
+      @logger.level = :warn    # :trace or 'trace'
 
       # @logger.warn Style.yellow("warn"), foo: "bar", baz: {qux: "quux"}
       # @logger.info Style.yellow("info"), foo: "bar", baz: {qux: "quux"}
@@ -216,38 +216,22 @@ module OpsWalrus
     end
 
     def bootstrap()
-      set_pwd(__FILE__.to_pathname.dirname)
-      bootstrap_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_bootstrap.ops"))
-      op = OperationRunner.new(self, bootstrap_ops_file)
-      op.run([], params_json_hash: @params)
+      run_internal("_bootstrap.ops")
     end
 
     def shell(command)
-      set_pwd(__FILE__.to_pathname.dirname)
-      shell_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_shell.ops"))
-      op = OperationRunner.new(self, shell_ops_file)
-      puts "running #{command}"
-      result = op.run([], params_json_hash: {"command" => command})
-      puts "result class=#{result.class}"
-      exit_status = result.exit_status
-      stdout = JSON.pretty_generate(result.value)
-      output = if exit_status == 0
-        Style.green(stdout)
-      else
-        Style.red(stdout)
-      end
-      puts output
-      exit_status
-    rescue Error => e
-      puts "Error: #{e.message}"
-      1
+      run_internal("_shell.ops", {"command" => command})
     end
 
     def reboot()
+      run_internal("_reboot.ops")
+    end
+
+    def run_internal(ops_file_name, params = @params)
       set_pwd(__FILE__.to_pathname.dirname)
-      shell_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_reboot.ops"))
-      op = OperationRunner.new(self, shell_ops_file)
-      result = op.run([], params_json_hash: @params)
+      internal_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join(ops_file_name))
+      op = OperationRunner.new(self, internal_ops_file)
+      result = op.run([], params_json_hash: params)
       puts "result class=#{result.class}"
       exit_status = result.exit_status
       stdout = JSON.pretty_generate(result.value)
@@ -263,7 +247,45 @@ module OpsWalrus
       1
     end
 
-    # args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
+    # package_operation_and_args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
+    # if the first argument is the path to a .ops file, then treat it as a local path, and add the containing package
+    #   to the load path
+    # otherwise, copy the
+    # returns the exit status code that the script should terminate with
+    def run_remote(package_operation_and_args, update_bundle: false)
+      return 0 if package_operation_and_args.empty?
+
+      ops_file_path, operation_kv_args, tmp_bundle_root_dir = get_entry_point_ops_file_and_args(package_operation_and_args)
+
+      ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
+
+      bundler.update if update_bundle
+
+      debug "Running: #{ops_file.ops_file_path}"
+
+      internal_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join("_run_remote.ops"))
+
+      op = OperationRunner.new(self, internal_ops_file)
+      result = op.run([], params_json_hash: {ops_file: ops_file, operation_kv_args: operation_kv_args})
+      exit_status = result.exit_status
+
+      debug "Op exit_status"
+      debug exit_status
+
+      debug "Op output"
+      debug JSON.pretty_generate(result.value)
+
+      puts JSON.pretty_generate(result.value)
+
+      exit_status
+    rescue Error => e
+      puts "Error: #{e.message}"
+      1
+    ensure
+      FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
+    end
+
+    # package_operation_and_args is of the form ["github.com/davidkellis/my-package/sub-package1", "operation1", "arg1:val1", "arg2:val2", "arg3:val3"]
     # if the first argument is the path to a .ops file, then treat it as a local path, and add the containing package
     #   to the load path
     # otherwise, copy the

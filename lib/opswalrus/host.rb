@@ -81,6 +81,13 @@ module OpsWalrus
       @_host.to_s
     end
 
+    def _invoke_remote(ops_file, *args, **kwargs)
+      puts "boom"
+      is_invocation_a_call_to_package_in_bundle_dir = true
+      invocation_context = RemoteImportInvocationContext.new(@runtime_env, self, ops_file, is_invocation_a_call_to_package_in_bundle_dir, ops_prompt_for_sudo_password: !!ssh_password)
+      invocation_context._invoke(*args, **kwargs)
+    end
+
     # returns [stdout, stderr, exit_status]
     def _bootstrap_host(print_report = true)
       # copy over bootstrap shell script
@@ -119,7 +126,7 @@ module OpsWalrus
       raise Error, "Unable to upload ops bundle to remote host" unless upload_success
 
       stdout, _stderr, exit_status = @_host.run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
-      raise Error, "Unable to unzip ops bundle on remote host" unless exit_status == 0
+      raise Error, "Unable to unzip ops bundle on remote host: #{stdout}" unless exit_status == 0
       tmp_bundle_root_dir = stdout.strip
       @_host.set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
 
@@ -168,7 +175,8 @@ module OpsWalrus
             # while trying to reconnect, we expect the following exceptions:
             # 1. Net::SSH::Disconnect < Net::SSH::Exception with message: "connection closed by remote host"
             # 2. Errno::ECONNRESET < SystemCallError with message: "Connection reset by peer"
-          rescue Net::SSH::Disconnect, Errno::ECONNRESET => e
+            # 3. Errno::ECONNREFUSED < SystemCallError with message: "Connection refused - connect(2) for 192.168.56.10:22"
+          rescue Net::SSH::Disconnect, Errno::ECONNRESET, Errno::ECONNREFUSED => e
             # noop; we expect these while we're trying to reconnect
           rescue => e
             puts "#{e.class} < #{e.class.superclass}"
@@ -214,7 +222,7 @@ module OpsWalrus
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil, ops_prompt_for_sudo_password: false)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, ops_prompt_for_sudo_password: false)
       # description = nil
 
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
@@ -241,28 +249,24 @@ module OpsWalrus
       #cmd = Shellwords.escape(cmd)
 
       cmd_id = Random.uuid.split('-').first
-      # if App.instance.report_mode?
       output_block = StringIO.open do |io|
-        io.print Style.blue(host)
-        io.print " (#{Style.blue(self.alias)})" if self.alias
-        io.print " | #{Style.magenta(description)}" if description
-        io.puts
-        io.print Style.yellow(cmd_id)
-        io.print Style.green.bold(" > ")
-        io.puts Style.yellow(cmd)
+        if App.instance.info?   # this is true if log_level is trace, debug, info
+          io.print Style.blue(host)
+          io.print " (#{Style.blue(self.alias)})" if self.alias
+          io.print " | #{Style.magenta(description)}" if description
+          io.puts
+          io.print Style.yellow(cmd_id)
+          io.print Style.green.bold(" > ")
+          io.puts Style.yellow(cmd)
+        elsif App.instance.warn? && description
+          io.print Style.blue(host)
+          io.print " (#{Style.blue(self.alias)})" if self.alias
+          io.print " | #{Style.magenta(description)}" if description
+          io.puts
+        end
         io.string
       end
-      puts output_block
-
-        # puts Style.green("*" * 80)
-        # if self.alias
-        #   print "[#{Style.blue(self.alias)} | #{Style.blue(host)}] "
-        # else
-        #   print "[#{Style.blue(host)}] "
-        # end
-        # print "#{description}: " if description
-        # puts Style.yellow("[#{cmd_id}] #{cmd}")
-      # end
+      puts output_block unless output_block.empty?
 
       return unless cmd && !cmd.strip.empty?
 
@@ -277,27 +281,37 @@ module OpsWalrus
       seconds = t2 - t1
 
       output_block = StringIO.open do |io|
-        if App.instance.info? || log_level == :info
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
-        elsif App.instance.debug? || log_level == :debug
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
-        elsif App.instance.trace? || log_level == :trace
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
+        if App.instance.info?   # this is true if log_level is trace, debug, info
+          if App.instance.trace?
+            io.puts Style.cyan(out)
+            io.puts Style.red(err)
+          elsif App.instance.debug?
+            io.puts Style.cyan(out)
+            io.puts Style.red(err)
+          elsif App.instance.info?
+            # io.puts Style.cyan(out)
+            # io.puts Style.red(err)
+          end
+          io.print Style.yellow(cmd_id)
+          io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+          if exit_status == 0
+            io.puts Style.green("#{exit_status} (success)")
+          else
+            io.puts Style.red("#{exit_status} (failure)")
+          end
+          io.puts Style.green("*" * 80)
+        elsif App.instance.warn? && description
+          io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+          if exit_status == 0
+            io.puts Style.green("#{exit_status} (success)")
+          else
+            io.puts Style.red("#{exit_status} (failure)")
+          end
+          io.puts Style.green("*" * 80)
         end
-        io.print Style.yellow(cmd_id)
-        io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
-        if exit_status == 0
-          io.puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-        else
-          io.puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-        end
-        io.puts Style.green("*" * 80)
         io.string
       end
-      puts output_block
+      puts output_block unless output_block.empty?
 
       [out, err, exit_status]
     end
@@ -313,18 +327,18 @@ module OpsWalrus
       # cmd = "OPS_GEM=\"#{OPS_GEM}\" OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}'; $OPS_GEM exec --conservative -g opswalrus ops"
       cmd = "OPSWALRUS_LOCAL_HOSTNAME='#{local_hostname_for_remote_host}' eval #{OPS_CMD}"
       if App.instance.trace?
-        cmd << " --trace"
+        cmd << " --loudest"
       elsif App.instance.debug?
-        cmd << " --debug"
+        cmd << " --louder"
       elsif App.instance.info?
-        cmd << " --verbose"
+        cmd << " --loud"
       end
       cmd << " #{ops_command.to_s}"
       cmd << " #{ops_command_options.to_s}" if ops_command_options
       cmd << " #{@tmp_bundle_root_dir}" if in_bundle_root_dir
       cmd << " #{command_arguments}" unless command_arguments.empty?
 
-      shell!(cmd, log_level: :info, ops_prompt_for_sudo_password: ops_prompt_for_sudo_password)
+      shell!(cmd, ops_prompt_for_sudo_password: ops_prompt_for_sudo_password)
     end
 
     def desc(msg)

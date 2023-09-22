@@ -263,7 +263,7 @@ module OpsWalrus
     end
 
     # returns the tuple: [stdout, stderr, exit_status]
-    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil, log_level: nil)
+    def shell!(desc_or_cmd = nil, cmd = nil, block = nil, input: nil)
       return ["", "", 0] if !desc_or_cmd && !cmd && !block    # we were told to do nothing; like hitting enter at the bash prompt; we can do nothing successfully
 
       description = desc_or_cmd if cmd || block
@@ -285,7 +285,7 @@ module OpsWalrus
       end
       #cmd = Shellwords.escape(cmd)
 
-      report_on(@runtime_env.local_hostname, description, cmd, log_level: log_level) do
+      report_on(@runtime_env.local_hostname, description, cmd) do
         if App.instance.dry_run?
           ["", "", 0]
         else
@@ -300,19 +300,25 @@ module OpsWalrus
       end
     end
 
-    def report_on(hostname, description = nil, cmd, log_level: nil)
+    def report_on(hostname, description = nil, cmd)
       cmd_id = Random.uuid.split('-').first
 
       output_block = StringIO.open do |io|
-        io.print Style.blue(hostname)
-        io.print " | #{Style.magenta(description)}" if description
-        io.puts
-        io.print Style.yellow(cmd_id)
-        io.print Style.green.bold(" > ")
-        io.puts Style.yellow(cmd)
+        if App.instance.info?   # this is true if log_level is trace, debug, info
+          io.print Style.blue(hostname)
+          io.print " | #{Style.magenta(description)}" if description
+          io.puts
+          io.print Style.yellow(cmd_id)
+          io.print Style.green.bold(" > ")
+          io.puts Style.yellow(cmd)
+        elsif App.instance.warn? && description
+          io.print Style.blue(hostname)
+          io.print " | #{Style.magenta(description)}" if description
+          io.puts
+        end
         io.string
       end
-      puts output_block
+      puts output_block unless output_block.empty?
 
       t1 = Time.now
       out, err, exit_status = yield
@@ -320,27 +326,37 @@ module OpsWalrus
       seconds = t2 - t1
 
       output_block = StringIO.open do |io|
-        if App.instance.info? || log_level == :info
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
-        elsif App.instance.debug? || log_level == :debug
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
-        elsif App.instance.trace? || log_level == :trace
-          io.puts Style.cyan(out)
-          io.puts Style.red(err)
+        if App.instance.info?   # this is true if log_level is trace, debug, info
+          if App.instance.trace?
+            io.puts Style.cyan(out)
+            io.puts Style.red(err)
+          elsif App.instance.debug?
+            io.puts Style.cyan(out)
+            io.puts Style.red(err)
+          elsif App.instance.info?
+            # io.puts Style.cyan(out)
+            # io.puts Style.red(err)
+          end
+          io.print Style.yellow(cmd_id)
+          io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+          if exit_status == 0
+            io.puts Style.green("#{exit_status} (success)")
+          else
+            io.puts Style.red("#{exit_status} (failure)")
+          end
+          io.puts Style.green("*" * 80)
+        elsif App.instance.warn? && description
+          io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+          if exit_status == 0
+            io.puts Style.green("#{exit_status} (success)")
+          else
+            io.puts Style.red("#{exit_status} (failure)")
+          end
+          io.puts Style.green("*" * 80)
         end
-        io.print Style.yellow(cmd_id)
-        io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
-        if exit_status == 0
-          io.puts Style.green("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-        else
-          io.puts Style.red("#{exit_status} (#{exit_status == 0 ? 'success' : 'failure'})")
-        end
-        io.puts Style.green("*" * 80)
         io.string
       end
-      puts output_block
+      puts output_block unless output_block.empty?
 
       [out, err, exit_status]
     end

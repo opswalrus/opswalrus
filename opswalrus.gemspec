@@ -32,6 +32,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # gem dependencies
+  spec.add_dependency "activesupport", "~> 7.0"
   spec.add_dependency "binding_of_caller", "~> 1.0"
   spec.add_dependency "citrus", "~> 3.0"
   spec.add_dependency "gli", "~> 2.21"

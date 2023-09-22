@@ -30,13 +30,11 @@ module OpsWalrus
 
     program_desc 'ops is an operation runner'
 
-    switch [:v, :verbose], desc: "Verbose output"
-    switch :debug, desc: "Debug output"
-    switch :trace, desc: "Trace output"
+    switch :loud, desc: "Verbose output"
+    switch :louder, desc: "Debug output"
+    switch :loudest, desc: "Trace output"
 
-    switch :noop, desc: "Perform a dry run"
-    switch :dryrun, desc: "Perform a dry run"
-    switch :dry_run, desc: "Perform a dry run"
+    switch :dry, desc: "Perform a dry run"
 
     flag [:h, :hosts], multiple: true, desc: "Specify the hosts.yaml file"
     flag [:t, :tags], multiple: true, desc: "Specify a set of tags to filter the hosts by"
@@ -61,7 +59,7 @@ module OpsWalrus
           hosts = global_options[:hosts]
           tags = global_options[:tags]
 
-          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+          $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
           $app.report_inventory(hosts, tags: tags)
         end
@@ -123,12 +121,10 @@ module OpsWalrus
     long_desc 'Bootstrap a set of hotss to run opswalrus: install dependencies, ruby, opswalrus gem'
     command :bootstrap do |c|
       # dry run
-      c.switch :noop, desc: "Perform a dry run"
-      c.switch :dryrun, desc: "Perform a dry run"
-      c.switch :dry_run, desc: "Perform a dry run"
+      c.switch :dry, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+        $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
         hosts = global_options[:hosts]
         $app.set_inventory_hosts(hosts)
@@ -141,7 +137,7 @@ module OpsWalrus
 
         $app.set_identity_files(id_files)
 
-        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        dry_run = global_options[:dry] || options[:dry]
         $app.dry_run! if dry_run
 
         $app.bootstrap()
@@ -155,12 +151,10 @@ module OpsWalrus
       c.flag [:u, :user], desc: "Specify the user that the operation will run as"
 
       # dry run
-      c.switch :noop, desc: "Perform a dry run"
-      c.switch :dryrun, desc: "Perform a dry run"
-      c.switch :dry_run, desc: "Perform a dry run"
+      c.switch :dry, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+        $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
         hosts = global_options[:hosts]
         $app.set_inventory_hosts(hosts)
@@ -176,7 +170,7 @@ module OpsWalrus
 
         $app.set_identity_files(id_files)
 
-        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        dry_run = global_options[:dry] || options[:dry]
         $app.dry_run! if dry_run
 
         if options[:pass]
@@ -193,12 +187,10 @@ module OpsWalrus
     long_desc 'Reboot one or more remote hosts'
     command :reboot do |c|
       # dry run
-      c.switch :noop, desc: "Perform a dry run"
-      c.switch :dryrun, desc: "Perform a dry run"
-      c.switch :dry_run, desc: "Perform a dry run"
+      c.switch :dry, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+        $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
         hosts = global_options[:hosts]
         $app.set_inventory_hosts(hosts)
@@ -211,7 +203,7 @@ module OpsWalrus
 
         $app.set_identity_files(id_files)
 
-        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        dry_run = global_options[:dry] || options[:dry]
         $app.dry_run! if dry_run
 
         exit_status = $app.reboot()
@@ -227,17 +219,16 @@ module OpsWalrus
       c.switch [:b, :bundle], desc: "Update bundle prior to running the specified operation"
       c.switch :pass, desc: "Prompt for a sudo password"
       c.switch :script, desc: "Script mode"
+      c.switch [:r, :remote], desc: "Run the operation on the remote hosts"
 
       c.flag [:u, :user], desc: "Specify the user that the operation will run as"
       c.flag [:p, :params], desc: "Either specify a file that contains JSON OR specify a JSON encoded string. In both cases, the JSON represents the runtime arguments (i.e. the params) for the operation. The JSON string must conform to the params schema for the operation being run."
 
       # dry run
-      c.switch :noop, desc: "Perform a dry run"
-      c.switch :dryrun, desc: "Perform a dry run"
-      c.switch :dry_run, desc: "Perform a dry run"
+      c.switch :dry, desc: "Perform a dry run"
 
       c.action do |global_options, options, args|
-        $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+        $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
         hosts = global_options[:hosts]
         $app.set_inventory_hosts(hosts)
@@ -256,7 +247,7 @@ module OpsWalrus
 
         $app.set_identity_files(id_files)
 
-        dry_run = [:noop, :dryrun, :dry_run].any? {|sym| global_options[sym] || options[sym] }
+        dry_run = global_options[:dry] || options[:dry]
         $app.dry_run! if dry_run
 
         if options[:pass]
@@ -267,7 +258,11 @@ module OpsWalrus
           $app.script_mode!
         end
 
-        exit_status = $app.run(args, update_bundle: options[:bundle])
+        exit_status = if options[:remote]
+          $app.run_remote(args, update_bundle: options[:bundle])
+        else
+          $app.run(args, update_bundle: options[:bundle])
+        end
 
         exit_now!("error", exit_status) unless exit_status == 0
       end
@@ -281,7 +276,7 @@ module OpsWalrus
       long_desc 'Download and bundle the latest versions of dependencies for the current package'
       c.command :update do |update|
         update.action do |global_options, options, args|
-          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+          $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
           $app.bundle_update
         end
@@ -301,7 +296,7 @@ module OpsWalrus
         unzip.flag [:o, :output], desc: "Specify the output directory"
 
         unzip.action do |global_options, options, args|
-          $app.set_log_level(global_options[:trace] && :trace || global_options[:debug] && :debug || global_options[:verbose] && :info || :warn)
+          $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
           output_dir = options[:output]
           zip_file_path = args.first

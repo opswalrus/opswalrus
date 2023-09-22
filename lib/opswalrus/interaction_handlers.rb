@@ -8,9 +8,7 @@ module OpsWalrus
 
     attr_accessor :input_mappings   # Hash[ String | Regex => String ]
 
-    # log_level is one of: :fatal, :error, :warn, :info, :debug, :trace
-    def initialize(mapping, log_level = nil)
-      @log_level = log_level
+    def initialize(mapping)
       @input_mappings = mapping
     end
 
@@ -63,7 +61,7 @@ module OpsWalrus
       if new_mapping.empty? || new_mapping == @input_mappings
         yield self
       else
-        yield ScopedMappingInteractionHandler.new(new_mapping, @log_level)
+        yield ScopedMappingInteractionHandler.new(new_mapping)
       end
     end
 
