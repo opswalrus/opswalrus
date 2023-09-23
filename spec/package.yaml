@@ -1,0 +1,5 @@
+author: David Ellis
+license: EPL-2.0
+dependencies:
+  core: opswalrus/core
+  docker: opswalrus/docker

@@ -1,0 +1,93 @@
+defaults:
+  service_user: ops
+192.168.56.10:
+  alias: test-arch
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - arch
+  - needs_gitea
+192.168.56.11:
+  alias: test-debian
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - debian
+  - needs_gitea
+192.168.56.12:
+  alias: test-fedora
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - fedora
+  - needs_gitea
+192.168.56.13:
+  alias: test-freebsd
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - freebsd
+  - bsd
+192.168.56.14:
+  alias: test-rocky
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - rocky
+  - needs_gitea
+192.168.56.15:
+  alias: test-ubuntu
+  user: vagrant
+  password: !secret vagrant-password
+  tags:
+  - test
+  - vagrant
+  - web
+  - ubuntu
+  - needs_gitea
+secrets:
+  vagrant-password:
+    ids: jack, jill
+    value: |
+      -----BEGIN AGE ENCRYPTED FILE-----
+      YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBIL0wrenFqdnYxdXNySEIy
+      ZERHeXNRc1RrNTNQSEtxNjIwZjdGeStGcEJ3CjNmYmNVVU14NnRXaldWdWZIbFFW
+      endncFBlY3JlY1FyMlhEN29LeWp4aVUKLT4gWDI1NTE5IEkrTGE0YmQvOVdwYUIr
+      QzROTHlxM0E4RmpUelVUUllkMjBxVG9veTl1aEUKR294QWl5RzhwUklaSG1Mdmxi
+      UDBwQ3pIeFRUQ2hqZW5ZOWtEN01hakR3dwotLS0gbzUvSnhKeVZXWjhLUm1pVlMz
+      aHFNcUFlenJsQlgxNXBzSE43amduL0V5YwpcWBZwF80aDGA8CmBqBy6Uy1gBgOmh
+      IchoKYGRlJMXkM/Ml+TpmPM=
+      -----END AGE ENCRYPTED FILE-----
+  fictional-secret-location-of-the-watering-hole:
+    ids: fictional_characters
+    value: |
+      -----BEGIN AGE ENCRYPTED FILE-----
+      YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBMcjlKVWVXYmNNZlByc0hp
+      dXNrNHppbVhjOU1BL2xmOXEzQk55emxFczJRCjQyT1pTQlJoemhxUHlDTVA1bWQz
+      dzM0cEk4VDNxeVhDZldXOU5ycnd1aDAKLT4gWDI1NTE5IEFkclY0TVBGdkl1blc0
+      VnRhUTBBSm5ZUVBnYktKYm9pV2ZGZ1NaNjZxVmcKNGxNKzZJZmFhQk9ydCt1a2Q1
+      cXQ3MmJnSXAvOWVqK2NwNnFyTDZyb203NAotLS0gSFBkQWpvRGl3d2lhekhPY3N4
+      c29xWXQ0U0I2dUZJOEtmOWpONE9jSUJOSQq2lKqceGmj38H2oXeVGHR9eiS57pLs
+      ZxCpVhWUUcbgXmLVXtO9AjP4mWel
+      -----END AGE ENCRYPTED FILE-----
+ids:
+  jack: age1c5p5zqw9a3948408yxvcw9l6qypmycr793wgqvdps34dm52hqp2qpp95q3
+  jill: age102v8j5ffhrh7g6ak9nzw7vu0eq3dmry3pfatm4lq2lqnltnw35qshzyetv
+  fictional_characters:
+  - jack
+  - jill

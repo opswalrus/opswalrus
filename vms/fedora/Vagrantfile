@@ -1,0 +1,55 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+  config.vm.box = "bento/fedora-38"
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  config.vm.network "private_network", ip: "192.168.56.12"
+
+  # config.ssh.insert_key = false
+  config.ssh.forward_agent = true
+
+  config.vm.provider "virtualbox" do |vb|
+  #   # Display the VirtualBox GUI when booting the machine
+  #   vb.gui = true
+  #
+  #   # Customize the amount of memory on the VM:
+    vb.memory = "1024"
+  end
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "tmpfs /tmp tmpfs rw,nodev,nosuid,size=5G 0 0" | sudo tee -a /etc/fstab
+
+    # this helps to address the issue where new builds of fedora do not honor the vagrant network config settings
+    sudo dnf install -yq NetworkManager-initscripts-ifcfg-rh
+
+    # this migrates the old network management config to the new style
+    sudo nmcli connection migrate
+
+    # # per https://github.com/hashicorp/vagrant/issues/12762#issuecomment-1535957837 :
+    # sudo nmcli conn modify 'Wired connection 2' ipv4.addresses $(cat /etc/sysconfig/network-scripts/ifcfg-eth1 | grep IPADDR | cut -d "=" -f2)
+    # sudo nmcli conn modify 'Wired connection 2' ipv4.method manual
+    # sudo systemctl restart NetworkManager
+
+    sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    sudo systemctl restart sshd
+
+    nohup sudo -b bash -c 'sleep 3; reboot' &>/dev/null;
+
+    # change vagrant user to require sudo password
+    sudo sed -i 's/vagrant ALL=(ALL) NOPASSWD: ALL/vagrant ALL=(ALL:ALL) ALL/g' /etc/sudoers.d/vagrant-nopasswd
+
+    # sudo sh -c 'echo root:foo | chpasswd'
+  SHELL
+end

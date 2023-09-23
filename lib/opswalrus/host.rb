@@ -288,8 +288,8 @@ module OpsWalrus
             io.puts Style.cyan(out)
             io.puts Style.red(err)
           elsif App.instance.info?
-            # io.puts Style.cyan(out)
-            # io.puts Style.red(err)
+            io.puts Style.cyan(out)
+            io.puts Style.red(err)
           end
           io.print Style.yellow(cmd_id)
           io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
