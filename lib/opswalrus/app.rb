@@ -32,7 +32,7 @@ module OpsWalrus
     end
 
     LOCAL_SUDO_PASSWORD_PROMPT = "[opswalrus] Please enter sudo password to run sudo in local environment: "
-
+    SCRIPT_RESULT_HEADER = "#### OpsWalrus Script Result JSON ".ljust(80, '#')
 
     attr_reader :local_hostname
     attr_reader :identity_file_paths
@@ -58,7 +58,7 @@ module OpsWalrus
       @pwd = pwd.to_pathname
       @bundler = Bundler.new(self, @pwd)
       @local_hostname = "localhost"
-      @mode = :report     # :report | :script
+      @script_mode = false
       @dry_run = false
       @zip_mutex = Thread::Mutex.new
     end
@@ -72,15 +72,11 @@ module OpsWalrus
     end
 
     def script_mode!
-      @mode = :script
-    end
-
-    def report_mode?
-      @mode == :report
+      @script_mode = true
     end
 
     def script_mode?
-      @mode == :script
+      @script_mode
     end
 
     def dry_run?
@@ -269,13 +265,7 @@ module OpsWalrus
       result = op.run([], params_json_hash: {ops_file: ops_file, operation_kv_args: operation_kv_args}.stringify_keys)
       exit_status = result.exit_status
 
-      debug "Op exit_status"
-      debug exit_status
-
-      debug "Op output"
-      debug JSON.pretty_generate(result.value)
-
-      puts JSON.pretty_generate(result.value)
+      print_script_result(result)
 
       exit_status
     rescue Error => e
@@ -305,13 +295,7 @@ module OpsWalrus
       result = op.run(operation_kv_args, params_json_hash: @params)
       exit_status = result.exit_status
 
-      debug "Op exit_status"
-      debug exit_status
-
-      debug "Op output"
-      debug JSON.pretty_generate(result.value)
-
-      puts JSON.pretty_generate(result.value)
+      print_script_result(result)
 
       exit_status
     rescue Error => e
@@ -319,6 +303,17 @@ module OpsWalrus
       1
     ensure
       FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
+    end
+
+    def print_script_result(result)
+      if script_mode?
+        output = StringIO.open do |io|
+          io.print(SCRIPT_RESULT_HEADER)
+          io.puts JSON.pretty_generate(result.value)
+          io.string
+        end
+        puts output
+      end
     end
 
     def load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
@@ -449,8 +444,8 @@ module OpsWalrus
     def bundle_status
     end
 
-    def bundle_update
-      bundler.update
+    def bundle_update(force = false)
+      bundler.update(force)
     end
 
     def report_inventory(host_references, tags: nil)

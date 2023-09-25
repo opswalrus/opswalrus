@@ -275,10 +275,12 @@ module OpsWalrus
       desc 'Update bundle dependencies'
       long_desc 'Download and bundle the latest versions of dependencies for the current package'
       c.command :update do |update|
+        update.switch [:f, :force], desc: "Force update even if the package has already been downloaded"
+
         update.action do |global_options, options, args|
           $app.set_log_level(global_options[:loudest] && :trace || global_options[:louder] && :debug || global_options[:loud] && :info || :warn)
 
-          $app.bundle_update
+          $app.bundle_update(options[:force])
         end
       end
 

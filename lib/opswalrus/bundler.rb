@@ -55,7 +55,7 @@ module OpsWalrus
     #   bundler_for_package.include_directory_in_bundle_as_self_pkg(pwd)
     # end
 
-    def update()
+    def update(force = false)
       # delete_pwd_bundle_directory   # this was causing problems when we do: ops run -r -b ... because a dynamic package reference was being
                                       # downloaded to the bundle dir, and then update was being called afterward, which was blowing away
                                       # the entire bundle dir, so when the bundle dir was copied to the remote host, the ops file being
@@ -66,22 +66,22 @@ module OpsWalrus
       package_yaml_files = pwd.glob("./**/package.yaml") - pwd.glob("./**/#{BUNDLE_DIR}/**/package.yaml")
       package_files_within_pwd = package_yaml_files.map {|path| PackageFile.new(path.realpath) }
 
-      download_package_dependency_tree(package_files_within_pwd)
+      download_package_dependency_tree(package_files_within_pwd, force: force)
 
       ops_files = pwd.glob("./**/*.ops") - pwd.glob("./**/#{BUNDLE_DIR}/**/*.ops")
       ops_files_within_pwd = ops_files.map {|path| OpsFile.new(@app, path.realpath) }
 
-      download_import_dependencies(ops_files_within_pwd)
+      download_import_dependencies(ops_files_within_pwd, force: force)
     end
 
     # downloads all transitive package dependencies associated with ops_files_and_package_files
     # all downloaded packages are placed into @bundle_dir
-    def download_package_dependency_tree(*ops_files_and_package_files)
+    def download_package_dependency_tree(*ops_files_and_package_files, force: false)
       package_files = ops_files_and_package_files.flatten.map(&:package_file).compact.uniq
 
       package_files.each do |root_package_file|
         pre_order_traverse(root_package_file) do |package_file|
-          download_package_dependencies(package_file).map do |downloaded_package_directory_path|
+          download_package_dependencies(package_file, force: force).map do |downloaded_package_directory_path|
             package_file_path = File.join(downloaded_package_directory_path, "package.yaml")
             PackageFile.new(package_file_path)
           end
@@ -89,13 +89,13 @@ module OpsWalrus
       end
     end
 
-    def download_import_dependencies(*ops_files)
+    def download_import_dependencies(*ops_files, force: false)
       ops_files.flatten.each do |ops_file|
         ops_file.imports.each do |local_name, import_reference|
           case import_reference
           when PackageDependencyReference, DynamicPackageImportReference
             package_reference = import_reference.package_reference
-            download_package(ops_file.dirname, ops_file.ops_file_path, package_reference)
+            download_package(ops_file.dirname, ops_file.ops_file_path, package_reference, force: force)
           when DirectoryReference
             # noop
           when OpsFileReference
@@ -107,11 +107,11 @@ module OpsWalrus
 
     # returns the array of the destination directories that the packages that ops_file depend on were downloaded to
     # e.g. [dir_path1, dir_path2, dir_path3, ...]
-    def download_package_dependencies(package_file)
+    def download_package_dependencies(package_file, force: false)
       containing_directory = package_file.containing_directory
       package_file_source = package_file.package_file_path
       package_file.dependencies.map do |local_name, package_reference|
-        download_package(containing_directory, package_file_source, package_reference)
+        download_package(containing_directory, package_file_source, package_reference, force: force)
       end
     end
 
@@ -138,7 +138,7 @@ module OpsWalrus
     # returns the destination directory that the package was downloaded to
     #
     # relative_base_path is the relative base path that any relative file paths captured in the package_reference should be evaluated relative to
-    def download_package(relative_base_path, source_of_package_reference, package_reference)
+    def download_package(relative_base_path, source_of_package_reference, package_reference, force: false)
       ensure_pwd_bundle_directory_exists
 
       local_name = package_reference.local_name
@@ -152,11 +152,11 @@ module OpsWalrus
 
       # we return early here under the assumption that an already downloaded package/version combo will not
       # differ if we download it again multiple times to the same location
-      if destination_package_path.exist?
+      if destination_package_path.exist? && !force
         App.instance.log("Skipping #{package_reference} referenced in #{source_of_package_reference} since it already has been downloaded to #{destination_package_path}")
         return destination_package_path
       end
-      # FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
+      FileUtils.remove_dir(destination_package_path) if destination_package_path.exist?
 
       # download_package_contents(package_file.containing_directory, local_name, package_url, version, destination_package_path)
       download_package_contents(relative_base_path, local_name, package_url, version, destination_package_path)

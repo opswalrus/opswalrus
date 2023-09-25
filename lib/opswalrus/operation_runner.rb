@@ -110,13 +110,6 @@ module OpsWalrus
         Invocation::Error.new(e)
       end
 
-      # if result.failure?
-      #   App.instance.debug "Ops script error details:"
-      #   App.instance.debug "Error: #{result.value}"
-      #   App.instance.debug "Status code: #{result.exit_status}"
-      #   App.instance.debug @entry_point_ops_file.script.to_s
-      # end
-
       result
     end
   end

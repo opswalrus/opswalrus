@@ -122,8 +122,8 @@ module OpsWalrus
         end
 
         # invoke the ops command on the remote host to run the specified ops script on the remote host
-        ops_command_options = ""
-        ops_command_options << "--pass" if @ops_prompt_for_sudo_password
+        ops_command_options = "--script"
+        ops_command_options << " --pass" if @ops_prompt_for_sudo_password
         ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
         retval = if ops_command_options.empty?
           @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
@@ -232,8 +232,8 @@ module OpsWalrus
         end
 
         # invoke the ops command on the remote host to run the specified ops script on the remote host
-        ops_command_options = ""
-        ops_command_options << "--pass" if @ops_prompt_for_sudo_password
+        ops_command_options = "--script"
+        ops_command_options << " --pass" if @ops_prompt_for_sudo_password
         ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
         retval = if ops_command_options.empty?
           @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
