@@ -273,7 +273,7 @@ module OpsWalrus
       return unless cmd && !cmd.strip.empty?
 
       t1 = Time.now
-      out, err, exit_status = if App.instance.dry_run?
+      output, stderr, exit_status = if App.instance.dry_run?
         ["", "", 0]
       else
         sshkit_cmd = execute_cmd(cmd, input_mapping: input, ops_prompt_for_sudo_password: ops_prompt_for_sudo_password)
@@ -282,17 +282,19 @@ module OpsWalrus
       t2 = Time.now
       seconds = t2 - t1
 
+      stdout, remote_ops_script_retval = parse_stdout_and_script_return_value(output)
+
       output_block = StringIO.open do |io|
         if App.instance.info?   # this is true if log_level is trace, debug, info
           if App.instance.trace?
-            io.puts Style.cyan(out)
-            io.puts Style.red(err)
+            io.puts Style.cyan(stdout)
+            io.puts Style.red(stderr)
           elsif App.instance.debug?
-            io.puts Style.cyan(out)
-            io.puts Style.red(err)
+            io.puts Style.cyan(stdout)
+            io.puts Style.red(stderr)
           elsif App.instance.info?
-            io.puts Style.cyan(out)
-            io.puts Style.red(err)
+            io.puts Style.cyan(stdout)
+            io.puts Style.red(stderr)
           end
           io.print Style.yellow(cmd_id)
           io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
@@ -315,7 +317,23 @@ module OpsWalrus
       end
       puts output_block unless output_block.empty?
 
-      [out, err, exit_status]
+      out = remote_ops_script_retval || stdout
+      [out, stderr, exit_status]
+    end
+
+    def parse_stdout_and_script_return_value(command_output)
+      output_sections = command_output.split(/^#{::OpsWalrus::App::SCRIPT_RESULT_HEADER}$/)
+      case output_sections.count
+      when 1
+        stdout, ops_script_retval = output_sections.first, nil
+      when 2
+        stdout, ops_script_retval = *output_sections
+      else
+        # this is unexpected
+        ops_script_retval = output_sections.pop
+        stdout = output_sections.join(::OpsWalrus::App::SCRIPT_RESULT_HEADER)
+      end
+      [stdout, ops_script_retval]
     end
 
     # runs the specified ops command with the specified command arguments
