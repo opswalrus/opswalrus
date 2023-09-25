@@ -102,7 +102,10 @@ module OpsWalrus
 
       if print_report && App.instance.info?
         if exit_status == 0
-          puts "Bootstrap success - #{to_s} (alias=#{self.alias})"
+          report = "Bootstrap success - #{to_s} (alias=#{self.alias})"
+          stdout_report = stdout.lines.last(3).map {|line| "        #{line}" }.join()
+          report << "\n    stdout:\n#{stdout_report}" unless stdout_report.empty?
+          puts report
         else
           stdout_report = stdout.lines.last(3).map {|line| "        #{line}" }.join()
           stderr_report = stderr.lines.last(3).map {|line| "        #{line}" }.join()

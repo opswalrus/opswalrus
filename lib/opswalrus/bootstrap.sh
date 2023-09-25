@@ -27,8 +27,8 @@ if [ -x $RTX ]; then
 
       # make sure the latest opswalrus gem is installed
       # todo: figure out how to install this differently, so that test versions will work
-      gem install opswalrus
-      # $GEM_CMD install opswalrus
+      # gem install opswalrus
+      $GEM_CMD install opswalrus
       $RTX reshim
 
       exit 0
