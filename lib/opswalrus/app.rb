@@ -308,7 +308,7 @@ module OpsWalrus
     def print_script_result(result)
       if script_mode?
         output = StringIO.open do |io|
-          io.print(SCRIPT_RESULT_HEADER)
+          io.puts SCRIPT_RESULT_HEADER
           io.puts JSON.pretty_generate(result.value)
           io.string
         end
