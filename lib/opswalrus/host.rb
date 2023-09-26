@@ -322,21 +322,25 @@ module OpsWalrus
     end
 
     def parse_stdout_and_script_return_value(command_output)
-      output_sections = command_output.split(/^#{::OpsWalrus::App::SCRIPT_RESULT_HEADER}$/)
+      output_sections = command_output.split(/#{::OpsWalrus::App::SCRIPT_RESULT_HEADER}/)
       case output_sections.count
       when 1
         stdout, ops_script_retval = output_sections.first, nil
+        # puts "found it1!: #{output_sections.inspect}"
       when 2
         stdout, ops_script_retval = *output_sections
+        # puts "found it2!: #{ops_script_retval}"
       else
         # this is unexpected
         ops_script_retval = output_sections.pop
         stdout = output_sections.join(::OpsWalrus::App::SCRIPT_RESULT_HEADER)
+        # puts "found it3!: #{ops_script_retval}"
       end
       [stdout, ops_script_retval]
     end
 
     # runs the specified ops command with the specified command arguments
+    # returns [stdout, stderr, exit_status]
     def run_ops(ops_command, ops_command_options = nil, command_arguments, in_bundle_root_dir: true, ops_prompt_for_sudo_password: false)
       local_hostname_for_remote_host = if self.alias
         "#{host} (#{self.alias})"

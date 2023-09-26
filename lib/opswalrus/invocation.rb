@@ -125,13 +125,16 @@ module OpsWalrus
         ops_command_options = "--script"
         ops_command_options << " --pass" if @ops_prompt_for_sudo_password
         ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
-        retval = if ops_command_options.empty?
+
+        output, stderr, exit_status = if ops_command_options.empty?
           @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         else
           @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         end
 
-        retval
+        App.instance.debug("Remote invocation failed:\n  cmd: ops run #{ops_command_options.to_s} #{remote_run_command_args.to_s}\n  stdout: #{output}\n") unless exit_status == 0
+
+        JSON.parse(output)
       ensure
         if json_kwargs_tempfile
           json_kwargs_tempfile.close rescue nil
@@ -235,13 +238,16 @@ module OpsWalrus
         ops_command_options = "--script"
         ops_command_options << " --pass" if @ops_prompt_for_sudo_password
         ops_command_options << " --params #{remote_json_kwargs_tempfile_basename}" if remote_json_kwargs_tempfile_basename
-        retval = if ops_command_options.empty?
+
+        output, stderr, exit_status = if ops_command_options.empty?
           @host_proxy.run_ops(:run, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         else
           @host_proxy.run_ops(:run, ops_command_options, remote_run_command_args, ops_prompt_for_sudo_password: @ops_prompt_for_sudo_password)
         end
 
-        retval
+        App.instance.debug("Remote invocation failed:\n  cmd: ops run #{ops_command_options.to_s} #{remote_run_command_args.to_s}\n  stdout: #{output}\n") unless exit_status == 0
+
+        JSON.parse(output)
       ensure
         if json_kwargs_tempfile
           json_kwargs_tempfile.close rescue nil
