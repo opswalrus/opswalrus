@@ -134,7 +134,7 @@ module OpsWalrus
 
         App.instance.debug("Remote invocation failed:\n  cmd: ops run #{ops_command_options.to_s} #{remote_run_command_args.to_s}\n  stdout: #{output}\n") unless exit_status == 0
 
-        JSON.parse(output)
+        RemoteInvocation.parse_remote_script_invocation_result(output)
       ensure
         if json_kwargs_tempfile
           json_kwargs_tempfile.close rescue nil
@@ -201,9 +201,19 @@ module OpsWalrus
 
 
 
-
-
   class RemoteInvocation
+    def self.parse_remote_script_invocation_result(json_string)
+      retval = JSON.parse(json_string)
+      case retval
+      when Hash
+        retval.with_indifferent_access.easynav
+      when Array
+        retval.easynav
+      else
+        retval
+      end
+    end
+
     def initialize(host_proxy, ops_file, ops_prompt_for_sudo_password: nil)
       @host_proxy = host_proxy
       @ops_file = ops_file
@@ -247,7 +257,7 @@ module OpsWalrus
 
         App.instance.debug("Remote invocation failed:\n  cmd: ops run #{ops_command_options.to_s} #{remote_run_command_args.to_s}\n  stdout: #{output}\n") unless exit_status == 0
 
-        JSON.parse(output)
+        RemoteInvocation.parse_remote_script_invocation_result(output)
       ensure
         if json_kwargs_tempfile
           json_kwargs_tempfile.close rescue nil

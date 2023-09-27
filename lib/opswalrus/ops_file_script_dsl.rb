@@ -366,7 +366,7 @@ module OpsWalrus
     end
 
     def parse_stdout_and_script_return_value(command_output)
-      output_sections = command_output.split(/^#{::OpsWalrus::App::SCRIPT_RESULT_HEADER}$/)
+      output_sections = command_output.split(/#{::OpsWalrus::App::SCRIPT_RESULT_HEADER}/)
       case output_sections.count
       when 1
         stdout, ops_script_retval = output_sections.first, nil

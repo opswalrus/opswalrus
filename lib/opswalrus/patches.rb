@@ -1,7 +1,54 @@
-require 'json'
-require 'pathname'
 require 'active_support'
 require 'active_support/core_ext/hash'
+require 'json'
+require 'pathname'
+
+class EasyNavProxy
+  extend Forwardable
+
+  # indexable_obj must implement #respond_to? and #has_key?
+  def initialize(indexable_obj)
+    @obj = indexable_obj
+  end
+
+  def_delegators :@obj, :[], :to_s, :inspect, :hash, :===, :==, :eql?, :kind_of?, :is_a?, :instance_of?, :respond_to?, :<=>
+
+  def easynav
+    self
+  end
+
+  def respond_to_missing?(method, *)
+    @obj.respond_to?(method) || @obj.has_key?(method)
+  end
+  def method_missing(method, *args, **kwargs, &block)
+    if @obj.respond_to?(method)
+      @obj.method(method).call(*args, **kwargs, &block)
+    elsif @obj.has_key?(method)
+      value = self[method]
+      case value
+      when Array, Hash
+        EasyNavProxy.new(value)
+      else
+        value
+      end
+    end
+  end
+end
+
+class Hash
+  def easynav
+    EasyNavProxy.new(self.with_indifferent_access)
+  end
+end
+
+class Array
+  def has_key?(key)
+    key.is_a?(Integer) && key < size
+  end
+  def easynav
+    EasyNavProxy.new(self)
+  end
+end
 
 class String
   def escape_single_quotes
@@ -22,7 +69,6 @@ class Pathname
     self
   end
 end
-
 
 class String
   def boolean!(default: false)

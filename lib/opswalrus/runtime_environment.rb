@@ -1,3 +1,5 @@
+require 'active_support'
+require 'active_support/core_ext/hash'
 require 'json'
 require 'shellwords'
 require 'socket'
@@ -238,7 +240,8 @@ module OpsWalrus
 
     def initialize(app)
       @app = app
-      @env = EnvParams.new(ENV)
+      # @env = EnvParams.new(ENV)
+      @env = ENV.to_h.with_indifferent_access.easynav
       @bundle_load_path = LoadPath.new(self, @app.bundle_dir)
       @app_load_path = LoadPath.new(self, @app.pwd)
 

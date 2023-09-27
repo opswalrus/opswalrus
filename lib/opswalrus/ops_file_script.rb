@@ -5,82 +5,81 @@ require_relative 'ops_file_script_dsl'
 
 module OpsWalrus
 
-  class ArrayOrHashNavigationProxy
-    extend Forwardable
+  # class ArrayOrHashNavigationProxy
+  #   extend Forwardable
 
-    def initialize(array_or_hash)
-      @obj = array_or_hash
-    end
+  #   def initialize(array_or_hash)
+  #     @obj = array_or_hash
+  #   end
 
-    def_delegators :@obj, :to_s, :inspect, :hash, :===, :eql?, :kind_of?, :is_a?, :instance_of?, :respond_to?, :<=>
+  #   def_delegators :@obj, :[], :to_s, :inspect, :hash, :===, :eql?, :kind_of?, :is_a?, :instance_of?, :respond_to?, :<=>
 
-    def [](index, *args, **kwargs, &block)
-      @obj.method(:[]).call(index, *args, **kwargs, &block)
-    end
-    def respond_to_missing?(method, *)
-      @obj.is_a?(Hash) && @obj.respond_to?(method)
-    end
-    def method_missing(name, *args, **kwargs, &block)
-      case @obj
-      when Array
-        @obj.method(name).call(*args, **kwargs, &block)
-      when Hash
-        if @obj.respond_to?(name)
-          @obj.method(name).call(*args, **kwargs, &block)
-        else
-          value = self[name.to_s]
-          case value
-          when Array, Hash
-            ArrayOrHashNavigationProxy.new(value)
-          else
-            value
-          end
-        end
-      end
-    end
-  end
+  #   # def [](index, *args, **kwargs, &block)
+  #   #   @obj.method(:[]).call(index, *args, **kwargs, &block)
+  #   # end
+  #   def respond_to_missing?(method, *)
+  #     @obj.is_a?(Hash) && @obj.respond_to?(method)
+  #   end
+  #   def method_missing(name, *args, **kwargs, &block)
+  #     case @obj
+  #     when Array
+  #       @obj.method(name).call(*args, **kwargs, &block)
+  #     when Hash
+  #       if @obj.respond_to?(name)
+  #         @obj.method(name).call(*args, **kwargs, &block)
+  #       else
+  #         value = self[name.to_s]
+  #         case value
+  #         when Array, Hash
+  #           ArrayOrHashNavigationProxy.new(value)
+  #         else
+  #           value
+  #         end
+  #       end
+  #     end
+  #   end
+  # end
 
-  class InvocationParams
-    # @params : Hash
+  # class InvocationParams
+  #   # @params : Hash
 
-    # params : Hash | ArrayOrHashNavigationProxy
-    def initialize(hashlike_params)
-      # this doesn't seem to make any difference
-      @params = hashlike_params.to_h
-      # @params = hashlike_params
-    end
+  #   # params : Hash | ArrayOrHashNavigationProxy
+  #   def initialize(hashlike_params)
+  #     # this doesn't seem to make any difference
+  #     @params = hashlike_params.to_h
+  #     # @params = hashlike_params
+  #   end
 
-    def [](key)
-      key = key.to_s if key.is_a? Symbol
-      @params[key]
-    end
+  #   def [](key)
+  #     @params[key]
+  #   end
 
-    def dig(*keys, default: nil)
-      # keys = keys.map {|key| key.is_a?(Integer) ? key : key.to_s }
-      @params.dig(*keys) || default
-    end
+  #   def dig(*keys, default: nil)
+  #     # keys = keys.map {|key| key.is_a?(Integer) ? key : key.to_s }
+  #     @params.dig(*keys) || default
+  #   end
 
-    def method_missing(name, *args, **kwargs, &block)
-      if @params.respond_to?(name)
-        @params.method(name).call(*args, **kwargs, &block)
-      else
-        value = self[name]
-        case value
-        when Array, Hash
-          ArrayOrHashNavigationProxy.new(value)
-        else
-          value
-        end
-      end
-    end
-  end
+  #   def method_missing(name, *args, **kwargs, &block)
+  #     if @params.respond_to?(name)
+  #       @params.method(name).call(*args, **kwargs, &block)
+  #     else
+  #       value = self[name]
+  #       case value
+  #       when Array, Hash
+  #         ArrayOrHashNavigationProxy.new(value)
+  #       else
+  #         value
+  #       end
+  #     end
+  #   end
+  # end
 
-  class EnvParams < InvocationParams
-    # params : Hash | ArrayOrHashNavigationProxy
-    def initialize(hashlike_params = ENV)
-      super(hashlike_params)
-    end
-  end
+  # class EnvParams < InvocationParams
+  #   # params : Hash | ArrayOrHashNavigationProxy
+  #   def initialize(hashlike_params = ENV)
+  #     super(hashlike_params)
+  #   end
+  # end
 
   class OpsFileScript
 
@@ -135,16 +134,27 @@ module OpsWalrus
       # - #host_proxy_class
       # - #backend
       # - all the dynamically defined methods in the subclass of Invocation
+      #
+      # Return value is whatever the script returned with one exception:
+      # - if the script returns a Hash or an Array, the return value is an EasyNavProxy
       invoke_method_definition = <<~INVOKE_METHOD
         def _invoke(runtime_env, hashlike_params)
           @runtime_env = runtime_env
-          @params = InvocationParams.new(hashlike_params)
+          @params = hashlike_params.easynav
           @runtime_ops_file_path = __FILE__
-          #{ruby_script}
+          _retval = begin
+            #{ruby_script}
+          end
+          case _retval
+          when Hash, Array
+            _retval.easynav
+          else
+            _retval
+          end
         end
       INVOKE_METHOD
 
-      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 4
+      invoke_method_line_count_prior_to_ruby_script_from_ops_file = 5
       klass.module_eval(invoke_method_definition, ops_file.ops_file_path.to_s, ops_file.script_line_offset - invoke_method_line_count_prior_to_ruby_script_from_ops_file)
 
       klass
