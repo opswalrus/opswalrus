@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.63)
+    opswalrus (1.0.64)
       activesupport (~> 7.0)
       bcrypt_pbkdf (~> 1.1)
       binding_of_caller (~> 1.0)
