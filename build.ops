@@ -8,7 +8,7 @@ imports:
 
 # when you run this script, it should do something like:
 # ~/sync/projects/ops/opswalrus on  main via 💎 v3.2.2
-# ❯ ../ops.sh run build.ops version:1.0.7
+# ❯ ops run build.ops version:1.0.7
 # Write version.rb for version 1.0.7
 # [localhost] Build gem: gem build opswalrus.gemspec
 # [localhost] Check whether Bitwarden is locked or not: bw status
@@ -38,8 +38,10 @@ sh("Build gem") { 'gem build opswalrus.gemspec' }
 
 sh("Commit Gemfile.lock and version.rb and git push changes") { 'git commit -am "gem {{ version }}" && git push' }
 
-bw_status_output = sh("Check whether Bitwarden is locked or not") { 'bw status' }
-# the status command currently exhibits an error in which it emits 'mac failed.' some number of times, so we need to filter that out
+# bw_status_output = sh("Check whether Bitwarden is locked or not") { 'bw status' }
+is_unlocked = sh? "Check whether Bitwarden is locked or not",
+                  'rbw unlocked'
+# the `bw status`` command currently exhibits an error in which it emits 'mac failed.' some number of times, so we need to filter that out
 # see:
 # - https://community.bitwarden.com/t/what-does-mac-failed-mean-exactly/29208
 # - https://github.com/bitwarden/cli/issues/88
@@ -47,14 +49,17 @@ bw_status_output = sh("Check whether Bitwarden is locked or not") { 'bw status' 
 # ❯ bw status
 # mac failed.
 # {"serverUrl":"...","lastSync":"2023-08-17T19:14:09.384Z","userEmail":"...","userId":"...","status":"locked"}
-bw_status_output = bw_status_output.gsub('mac failed.', '').strip
-bw_status_json = bw_status_output.parse_json
+# bw_status_output = bw_status_output.gsub('mac failed.', '').strip
+# bw_status_json = bw_status_output.parse_json
 
-if bw_status_json['status'] != 'unlocked'
-  exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
-end
+# if bw_status_json['status'] != 'unlocked'
+#   exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
+# end
+exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock" unless is_unlocked
 
-totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
+# totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
+totp = sh "Get Rubygems OTP",
+          'rbw get -f totp Rubygems'
 sh("Push gem", input: {/You have enabled multi-factor authentication. Please enter OTP code./ => "#{totp}\n"}) { 'gem push opswalrus-{{ version }}.gem' }
 sh("Build docker image") { 'docker build -t ghcr.io/opswalrus/ops:latest -t ghcr.io/opswalrus/ops:{{ version }} -t opswalrus/ops:latest -t opswalrus/ops:{{ version }} .' }
 sh("Push docker image to ghcr.io/opswalrus/ops") { 'docker push ghcr.io/opswalrus/ops:latest' }
