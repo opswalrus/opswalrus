@@ -255,7 +255,7 @@ module OpsWalrus
 
       ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
 
-      bundler.update if update_bundle
+      bundler.update(true) if update_bundle
 
       debug "Running: #{ops_file.ops_file_path}"
 
@@ -287,7 +287,7 @@ module OpsWalrus
 
       ops_file = load_entry_point_ops_file(ops_file_path, tmp_bundle_root_dir)
 
-      bundler.update if update_bundle
+      bundler.update(true) if update_bundle
 
       debug "Running: #{ops_file.ops_file_path}"
 
