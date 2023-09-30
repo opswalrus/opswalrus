@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    opswalrus (1.0.66)
+    opswalrus (1.0.67)
       activesupport (~> 7.0)
       bcrypt_pbkdf (~> 1.1)
       binding_of_caller (~> 1.0)
@@ -86,7 +86,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
     rspec-support (3.12.1)
-    rubocop (1.56.3)
+    rubocop (1.56.4)
       base64 (~> 0.1.1)
       json (~> 2.3)
       language_server-protocol (>= 3.17.0)

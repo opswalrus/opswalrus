@@ -349,7 +349,7 @@ module OpsWalrus
           end
           io.puts Style.green("*" * 80)
         elsif App.instance.warn? && description
-          io.print Style.blue(" | Finished in #{seconds} seconds with exit status ")
+          io.print Style.blue("Finished in #{seconds} seconds with exit status ")
           if exit_status == 0
             io.puts Style.green("#{exit_status} (success)")
           else
