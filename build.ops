@@ -55,7 +55,7 @@ is_unlocked = sh? "Check whether Bitwarden is locked or not",
 # if bw_status_json['status'] != 'unlocked'
 #   exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock"
 # end
-exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: bw unlock" unless is_unlocked
+exit 1, "Bitwarden is not unlocked. Please unlock bitwarden with: rbw unlock" unless is_unlocked
 
 # totp = sh("Get Rubygems OTP") { 'bw get totp Rubygems' }
 totp = sh "Get Rubygems OTP",
