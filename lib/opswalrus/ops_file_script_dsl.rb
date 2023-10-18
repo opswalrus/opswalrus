@@ -192,7 +192,7 @@ module OpsWalrus
       kwargs = kwargs.transform_keys(&:to_s)
       tags.concat(kwargs["tags"]) if kwargs["tags"]
 
-      @runtime_env.app.inventory(tags)
+      @runtime_env.app.inventory(tags).hosts
     end
 
     def exit(exit_status, message = nil)
@@ -242,6 +242,10 @@ module OpsWalrus
       else
         @runtime_env.env.dig(*keys)
       end
+    end
+
+    def read_secret(secret_name)
+      @runtime_env.read_secret(secret_name)
     end
 
     # runs the given command

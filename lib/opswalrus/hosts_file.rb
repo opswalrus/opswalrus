@@ -54,7 +54,7 @@ module OpsWalrus
       #   "192.168.56.10"=>{"tags"=>["web", "vagrant"]}
       # }
       @yaml.map do |host_ref, host_attrs|
-        next if ['default', 'defaults', 'secrets', 'ids'].include?(host_ref)
+        next if ['default', 'defaults', 'env', 'ids', 'secrets'].include?(host_ref)
 
         host_params = host_attrs.is_a?(Hash) ? host_attrs : {}
 
@@ -122,6 +122,11 @@ module OpsWalrus
       end
     end
 
+    # returns a Hash object that may have nested structures
+    def env
+      @env ||= (@yaml["env"] || {})
+    end
+
     def tags(host)
       host_attrs = @yaml[host]
 
@@ -148,10 +153,14 @@ module OpsWalrus
       yaml.sub(/^---\s*/,"")    # omit the leading line: ---\n
     end
 
+    def has_secret?(secret_name)
+      secrets[secret_name]
+    end
+
     # returns the decrypted value referenced by secret_name
     def read_secret(secret_name)
       secret = secrets[secret_name]
-      secret.decrypt(@cipher)
+      secret.decrypt(@cipher) if secret
     end
 
     def encrypt_secrets!()

@@ -449,7 +449,7 @@ module OpsWalrus
     end
 
     def report_inventory(host_references, tags: nil)
-      selected_hosts = inventory(tags, host_references)
+      selected_hosts = inventory(tags, host_references).hosts
 
       selected_hosts.each do |host|
         puts host.summary(verbose?)
@@ -464,7 +464,7 @@ module OpsWalrus
 
       host_references = [HostsFile::DEFAULT_FILE_NAME] if (host_references.nil? || host_references.empty?) && File.exist?(HostsFile::DEFAULT_FILE_NAME)
 
-      Inventory.new(host_references, tags).hosts
+      Inventory.new(host_references, tags)
     end
 
     def edit_inventory(file_path)

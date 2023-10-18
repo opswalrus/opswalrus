@@ -240,8 +240,7 @@ module OpsWalrus
 
     def initialize(app)
       @app = app
-      # @env = EnvParams.new(ENV)
-      @env = ENV.to_h.with_indifferent_access.easynav
+      @env = @app.inventory.env.deep_merge(ENV.to_h).with_indifferent_access.easynav
       @bundle_load_path = LoadPath.new(self, @app.bundle_dir)
       @app_load_path = LoadPath.new(self, @app.pwd)
 
@@ -260,6 +259,10 @@ module OpsWalrus
       @interaction_handler = ScopedMappingInteractionHandler.new(interaction_handler_mapping_for_sudo_password)
 
       configure_sshkit
+    end
+
+    def read_secret(secret_name)
+      @app.inventory.read_secret(secret_name.to_s)
     end
 
     # input_mapping : Hash[ String | Regex => String ]

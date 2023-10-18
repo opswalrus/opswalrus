@@ -1,6 +1,7 @@
-require "pathname"
-require "tty-editor"
-require "yaml"
+require 'active_support/core_ext/hash'
+require 'pathname'
+require 'tty-editor'
+require 'yaml'
 
 module OpsWalrus
   class Inventory
@@ -9,6 +10,18 @@ module OpsWalrus
     def initialize(host_references = [HostsFile::DEFAULT_FILE_NAME], tags = [])
       @host_references = host_references
       @tags = tags
+    end
+
+    def env
+      @env ||= hosts_files.reduce({}) {|memo, hosts_file| memo.deep_merge(hosts_file.env) }
+    end
+
+    def read_secret(secret_name)
+      hosts_files.find {|hosts_file| hosts_file.has_secret?(secret_name) }&.read_secret(secret_name)
+    end
+
+    def hosts_files
+      @hosts_files ||= @host_references.select {|ref| File.exist?(ref) }.map {|file_path| HostsFile.new(file_path) }
     end
 
     def hosts()
