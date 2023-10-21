@@ -149,7 +149,7 @@ module OpsWalrus
       hash["secrets"] = secrets
       hash["ids"] = ids
 
-      yaml = Psych.safe_dump(hash, permitted_classes: [SecretRef, Secret, PublicKey])
+      yaml = Psych.safe_dump(hash, permitted_classes: [SecretRef, Secret, PublicKey], line_width: 500)
       yaml.sub(/^---\s*/,"")    # omit the leading line: ---\n
     end
 
