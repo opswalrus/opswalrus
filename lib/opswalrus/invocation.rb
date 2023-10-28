@@ -23,6 +23,15 @@ module OpsWalrus
     def _non_bang_method(name)
       name.to_s.sub(/!$/, '')
     end
+
+    # define methods that exist on kernel and forward them to the method_missing call because
+    # we want method_missing to handle the calls that may result from navigating through a package's
+    # directory structure (e.g. we include clone here to handle core.git.clone which conflicts with Kernel#clone)
+    [:clone].each do |symbol_name|
+      define_method(symbol_name) do |*args, **kwargs, &block|
+        method_missing(symbol_name, *args, **kwargs, &block)
+      end
+    end
   end
 
   class RemoteImportInvocationContext < ImportInvocationContext
