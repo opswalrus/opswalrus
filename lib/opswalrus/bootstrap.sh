@@ -54,7 +54,7 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential procps curl file git
 
   # restart services that need it
-  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || (echo 'Reboot needed. Exiting.'; exit 1;)
+  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || { echo 'Reboot needed. Exiting.'; exit 1; }
   # sudo needrestart -q -r a
 elif echo $OS | grep -q 'fedora'; then
   sudo dnf groupinstall -y 'Development Tools'
@@ -104,7 +104,7 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo apt update -qy
 
   # reboot if needed
-  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || (echo 'Reboot needed. Exiting.'; exit 1;)
+  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || { echo 'Reboot needed. Exiting.'; exit 1; }
 
   # install ruby dependencies
   # see https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
@@ -115,7 +115,7 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq autoconf patch build-essential rustc libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libgmp-dev libncurses5-dev libffi-dev libgdbm-dev libdb-dev uuid-dev
 
   # reboot if needed
-  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || (echo 'Reboot needed. Exiting.'; exit 1;)
+  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || { echo 'Reboot needed. Exiting.'; exit 1; }
 elif echo $OS | grep -q 'fedora'; then
   # from https://github.com/rbenv/ruby-build/wiki#suggested-build-environment
   sudo yum install -y gcc patch bzip2 openssl-devel libyaml-devel libffi-devel readline-devel zlib-devel gdbm-devel ncurses-devel
@@ -141,7 +141,7 @@ if echo $OS | grep -q 'ubuntu'; then
   sudo apt update -qy
 
   # reboot if needed
-  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || (echo 'Reboot needed. Exiting.'; exit 1;)
+  (sudo needrestart -b | grep -q 'NEEDRESTART-KSTA: 1') || { echo 'Reboot needed. Exiting.'; exit 1; }
 
   sudo DEBIAN_FRONTEND=noninteractive apt install -yq age
 
