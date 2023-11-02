@@ -6,7 +6,7 @@ module OpsWalrus
     STANDARD_SUDO_PASSWORD_PROMPT = /\[sudo\] password for .*?:\s*/
     STANDARD_SSH_PASSWORD_PROMPT = /.*?@.*?'s password:\s*/
 
-    attr_accessor :input_mappings   # Hash[ String | Regex => String ]
+    attr_accessor :input_mappings   # Hash[ String | Regex => (String | Proc) ]
 
     def initialize(mapping)
       @input_mappings = mapping
@@ -39,7 +39,7 @@ module OpsWalrus
     # temporarily adds the specified input mapping to the interaction handler while the given block is being evaluated
     # when the given block returns, then the temporary mapping is removed from the interaction handler
     #
-    # mapping : Hash[ String | Regex => String ] | Nil
+    # mapping : Hash[ String | Regex => (String | Proc) ] | Nil
     def with_mapping(mapping = nil, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true)
       new_mapping = inherit_existing_mappings ? @input_mappings : {}
 
@@ -67,7 +67,7 @@ module OpsWalrus
 
     # adds the specified input mapping to the interaction handler
     #
-    # mapping : Hash[ String | Regex => String ]
+    # mapping : Hash[ String | Regex => (String | Proc) ]
     def add_mapping(mapping)
       @input_mappings.merge!(mapping)
     end
@@ -84,13 +84,20 @@ module OpsWalrus
     # This method returns the data that is emitted to the response channel as a result of having processed the output
     # from a command that the interaction handler was expecting.
     def on_data(_command, stream_name, data, response_channel)
-      response_data = begin
-        first_matching_key_value_pair = @input_mappings.find {|k, _v| k === data }
-        first_matching_key_value_pair&.last
+      response_data = @input_mappings.find_map do |pattern, mapped_output_value|
+        pattern = pattern.is_a?(String) ? Regexp.new(Regexp.escape(pattern)) : pattern
+        if pattern_match = data.match(pattern)   # pattern_match : MatchData | Nil
+          case mapped_output_value
+          when Proc, Method
+            mapped_output_value.call(pattern_match)
+          when String
+            mapped_output_value
+          end
+        end
       end
 
       if response_data.nil?
-        trace(Style.red("No interaction handler mapping for #{stream_name}: #{data} so no response was sent"))
+        trace(Style.red("No interaction handler mapping for #{stream_name}: `#{data}` so no response was sent"))
       else
         debug(Style.cyan("Handling #{stream_name} message #{data}"))
         debug(Style.cyan("Sending response #{response_data}"))
