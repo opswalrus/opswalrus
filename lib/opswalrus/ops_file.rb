@@ -61,12 +61,14 @@ module OpsWalrus
     def parse(script_string)
       file_halves = script_string.split(/^\.\.\.$/, 2)
       case file_halves.count
+      when 0
+        yaml, ruby_script = "", ""
       when 1
         yaml, ruby_script = "", file_halves.first
       when 2
         yaml, ruby_script = *file_halves
       else
-        raise Error, "Unexpected number of file sections: #{file_halves.inspect}"
+        raise Error, "Unexpected number of file sections in #{@ops_file_path}: #{file_halves.inspect}"
       end
       [yaml, ruby_script]
     end

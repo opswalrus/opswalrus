@@ -111,7 +111,7 @@ module OpsWalrus
         end # runtime_env.handle_input
       end # SSHKit::Coordinator
       results
-    end # def ssh
+    end # def ssh_noprep
 
     # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
     def ssh(*args, **kwargs, &block)

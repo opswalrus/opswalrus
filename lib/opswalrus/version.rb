@@ -1,3 +1,3 @@
 module OpsWalrus
-  VERSION = "1.0.74"
+  VERSION = "1.0.75"
 end
