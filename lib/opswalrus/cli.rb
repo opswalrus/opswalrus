@@ -20,12 +20,18 @@ module OpsWalrus
 
     # this is invoked on an unhandled exception or a call to exit_now!
     on_error do |exception|
-      next(false) if exception.is_a? GLI::CustomExit
-
-      $app.fatal "catchall exception handler:"
-      $app.fatal exception.message
-      $app.fatal exception.backtrace.join("\n")
-      false   # disable built-in exception handling
+      case exception
+      when GLI::CustomExit
+        next(false)
+      when GLI::BadCommandLine
+        true # use GLI's default error handling
+      else
+        $app.fatal "catchall exception handler:"
+        $app.fatal exception.class
+        $app.fatal exception.message
+        $app.fatal exception.backtrace.join("\n")
+        false   # disable built-in exception handling
+      end
     end
 
     program_desc 'ops is an operation runner'
