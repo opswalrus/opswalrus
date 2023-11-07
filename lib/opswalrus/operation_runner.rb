@@ -68,16 +68,6 @@ module OpsWalrus
       end
     end
 
-    # def try_convert(value)
-    #   if value.is_a? String
-    #     JSON.parse(value)
-    #   else
-    #     value
-    #   end
-    # rescue JSON::ParserError => e
-    #   value
-    # end
-
     # runtime_kv_args is an Array(String) of the form: ["arg1:val1", "arg1:val2", ...]
     # params_json_hash is a Hash representation of a JSON string
     def run(runtime_kv_args, params_json_hash: nil)
