@@ -294,7 +294,7 @@ module OpsWalrus
         if App.instance.dry_run?
           ["", "", 0]
         else
-          sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true) do |interaction_handler|
+          sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true, lookback_window_chars: 200) do |interaction_handler|
             # puts "self=#{self.class.superclass}"
             # self is an instance of one of the dynamically defined subclasses of OpsFileScript
             App.instance.debug("OpsFileScriptDSL#shell! cmd=#{cmd} with input mappings #{interaction_handler.input_mappings.inspect} given input: #{input.inspect})")
@@ -311,14 +311,14 @@ module OpsWalrus
       output_block = StringIO.open do |io|
         if App.instance.info?   # this is true if log_level is trace, debug, info
           io.print Style.blue(hostname)
-          io.print " | #{Style.magenta(description)}" if description
+          io.print " | #{Style.green(description)}" if description
           io.puts
           io.print Style.yellow(cmd_id)
           io.print Style.green.bold(" > ")
           io.puts Style.yellow(cmd)
         elsif App.instance.warn? && description
           io.print Style.blue(hostname)
-          io.print " | #{Style.magenta(description)}" if description
+          io.print " | #{Style.green(description)}" if description
           io.puts
         end
         io.string

@@ -44,6 +44,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "bcrypt_pbkdf", "~> 1.1"
   spec.add_dependency "ed25519", "~> 1.3"
+  spec.add_dependency "kleene", ">= 0"
   spec.add_dependency "sshkit", "~> 1.21"       # sshkit uses net-ssh, which depends on bcrypt_pbkdf and ed25519 to dynamically add support for ed25519 if those two gems are present
 
   # For more information and examples about making a new gem, check out our

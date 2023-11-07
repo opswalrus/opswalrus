@@ -255,7 +255,7 @@ module OpsWalrus
         if App.instance.info?   # this is true if log_level is trace, debug, info
           io.print Style.blue(host)
           io.print " (#{Style.blue(self.alias)})" if self.alias
-          io.print " | #{Style.magenta(description)}" if description
+          io.print " | #{Style.green(description)}" if description
           io.puts
           io.print Style.yellow(cmd_id)
           io.print Style.green.bold(" > ")
@@ -263,7 +263,7 @@ module OpsWalrus
         elsif App.instance.warn? && description
           io.print Style.blue(host)
           io.print " (#{Style.blue(self.alias)})" if self.alias
-          io.print " | #{Style.magenta(description)}" if description
+          io.print " | #{Style.green(description)}" if description
           io.puts
         end
         io.string
