@@ -60,16 +60,16 @@ module OpsWalrus
       end
       new_mapping.merge!(password_mappings) if password_mappings
 
-      # trace(Style.green("mapping: #{mapping}"))
-      # trace(Style.green("new_mapping: #{new_mapping}"))
-      # trace(Style.green("new_mapping.empty?: #{new_mapping.empty?}"))
-      # trace(Style.green("new_mapping == @input_mappings: #{new_mapping == @input_mappings}"))
+      debug(Style.green("mapping: #{mapping}"))
+      debug(Style.green("new_mapping: #{new_mapping}"))
+      debug(Style.green("new_mapping.empty?: #{new_mapping.empty?}"))
+      debug(Style.green("new_mapping == @input_mappings: #{new_mapping == @input_mappings}"))
       if new_mapping.empty? || new_mapping == @input_mappings
-        trace(Style.red("with_mapping -> reset"))
+        debug(Style.red("with_mapping -> reset"))
         @online_matcher.reset
         yield self
       else
-        trace(Style.red("with_mapping -> new mapping"))
+        debug(Style.red("with_mapping -> new mapping"))
         yield ScopedMappingInteractionHandler.new(new_mapping, lookback_window_chars)
       end
     end
@@ -97,7 +97,7 @@ module OpsWalrus
       # trace(Style.yellow("data=`#{data}`"))
       # trace(Style.yellow("buffer=#{@online_matcher.instance_exec { @buffer } }"))
       new_matches = @online_matcher.ingest(data)
-      # trace(Style.yellow("new_matches=`#{new_matches}`"))
+      debug(Style.yellow("new_matches=`#{new_matches}`"))
       response_data = new_matches.find_map do |online_match|
         mapped_output_value = @input_mappings[online_match.regex]
         case mapped_output_value
@@ -107,7 +107,7 @@ module OpsWalrus
           mapped_output_value
         end
       end
-      # trace(Style.yellow("response_data=`#{response_data.inspect}`"))
+      debug(Style.yellow("response_data=`#{response_data.inspect}`"))
 
       # response_data = @input_mappings.find_map do |pattern, mapped_output_value|
       #   pattern = pattern.is_a?(String) ? Regexp.new(Regexp.escape(pattern)) : pattern
@@ -124,8 +124,8 @@ module OpsWalrus
       if response_data.nil?
         trace(Style.red("No interaction handler mapping for #{stream_name}: `#{data}` so no response was sent"))
       else
-        debug(Style.cyan("Handling #{stream_name} message #{data}"))
-        debug(Style.cyan("Sending response #{response_data}"))
+        debug(Style.yellow("Handling #{stream_name} message |>#{data}<|"))
+        debug(Style.yellow("Sending response |>#{response_data}<|"))
         if response_channel.respond_to?(:send_data)  # Net SSH Channel
           App.instance.trace "writing: #{response_data.to_s} to Net SSH Channel"
           response_channel.send_data(response_data.to_s)
