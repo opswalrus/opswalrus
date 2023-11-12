@@ -313,6 +313,7 @@ module OpsWalrus
 
     def print_script_result(result)
       if script_mode?
+        SemanticLogger.flush
         output = StringIO.open do |io|
           io.puts SCRIPT_RESULT_HEADER
           io.puts JSON.pretty_generate(result.value)
