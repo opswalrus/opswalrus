@@ -239,7 +239,9 @@ module OpsWalrus
       puts output
       exit_status
     rescue Error => e
-      puts "Error: #{e.message}"
+      message = "Runtime error: #{e.message}"
+      puts message
+      print_script_result(message)
       1
     end
 
@@ -269,7 +271,9 @@ module OpsWalrus
 
       exit_status
     rescue Error => e
-      puts "Error: #{e.message}"
+      message = "Runtime error: #{e.message}"
+      puts message
+      print_script_result(message)
       1
     ensure
       FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
@@ -299,7 +303,9 @@ module OpsWalrus
 
       exit_status
     rescue Error => e
-      puts "Error: #{e.message}"
+      message = "Runtime error: #{e.message}"
+      puts message
+      print_script_result(message)
       1
     ensure
       FileUtils.remove_entry(tmp_bundle_root_dir) if tmp_bundle_root_dir
