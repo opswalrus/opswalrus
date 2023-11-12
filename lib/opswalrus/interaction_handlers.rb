@@ -4,8 +4,8 @@ require 'sshkit'
 module OpsWalrus
 
   class ScopedMappingInteractionHandler
-    STANDARD_SUDO_PASSWORD_PROMPT = /\[sudo\] password for .*?:\s*/
-    STANDARD_SSH_PASSWORD_PROMPT = /.*?@.*?'s password:\s*/
+    STANDARD_SUDO_PASSWORD_PROMPT = /\[sudo\] password for .*?:/
+    STANDARD_SSH_PASSWORD_PROMPT = /.*?@.*?'s password:/
 
     attr_accessor :input_mappings   # Hash[ String | Regex => (String | Proc) ]
 
