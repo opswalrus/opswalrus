@@ -319,7 +319,7 @@ module OpsWalrus
           io.puts JSON.pretty_generate(result.value)
           io.string
         end
-        puts "print_script_result - #{puts Time.now}"
+        puts "print_script_result - #{Time.now}"
         puts output
       end
     end

@@ -88,13 +88,13 @@ module OpsWalrus
       rescue SSHKit::Command::Failed => e
         App.instance.error "[!] Command failed: #{e.message}"
       rescue Error => e
-        puts "OperationRunner#run - #{puts Time.now}"
+        puts "OperationRunner#run - #{Time.now}"
         App.instance.error "Error: Ops script crashed."
         App.instance.error e.message
         App.instance.error e.backtrace.take(10).join("\n")
         Invocation::Error.new(e)
       rescue => e
-        puts "OperationRunner#run - #{puts Time.now}"
+        puts "OperationRunner#run - #{Time.now}"
         App.instance.error "Unhandled Error: Ops script crashed."
         App.instance.error e.class
         App.instance.error e.message
