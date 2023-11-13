@@ -2,7 +2,7 @@ module OpsWalrus
   class Error < StandardError
   end
 
-  class InvocationError < Error
+  class RemoteInvocationError < Error
   end
 
   class SymbolResolutionError < Error
