@@ -178,10 +178,11 @@ module OpsWalrus
             App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
           rescue Errno::EHOSTUNREACH => e
             App.instance.error "[!] The host '#{host}' is unreachable"
-          rescue => e
-            App.instance.error e.class
-            App.instance.error e.message
-            App.instance.error e.backtrace.join("\n")
+          # rescue => e
+          #   App.instance.error "[!] Command failed:"
+          #   App.instance.error e.class
+          #   App.instance.error e.message
+          #   App.instance.error e.backtrace.join("\n")
           ensure
             host.clear_ssh_session
           end
