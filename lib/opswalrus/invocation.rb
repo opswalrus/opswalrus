@@ -215,7 +215,11 @@ module OpsWalrus
       retval = JSON.parse(json_string)
       case retval
       when Hash
-        retval.with_indifferent_access.easynav
+        if retval["type"] == 'Invocation::Error'
+          raise InvocationError.new("#{retval["error_type"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}")
+        else
+          retval.with_indifferent_access.easynav
+        end
       when Array
         retval.easynav
       else

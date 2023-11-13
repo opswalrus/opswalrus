@@ -86,17 +86,17 @@ module OpsWalrus
           Invocation::Success.new(ruby_script_return)
         end
       rescue SSHKit::Command::Failed => e
-        App.instance.error "[!] Command failed: #{e.message}"
+        App.instance.error "Runtime error, command failed: #{e.message}"
         Invocation::Error.new(e)
       rescue Error => e
         # puts "OperationRunner#run - #{Time.now.strftime('%s%L')}"
-        App.instance.error "Error: Ops script crashed."
+        App.instance.error "Runtime error: Ops script crashed."
         App.instance.error e.message
         App.instance.error e.backtrace.take(10).join("\n")
         Invocation::Error.new(e)
       rescue => e
         # puts "OperationRunner#run - #{Time.now.strftime('%s%L')}"
-        App.instance.error "Unhandled Error: Ops script crashed."
+        App.instance.error "Unhandled runtime error: Ops script crashed."
         App.instance.error e.class
         App.instance.error e.message
         App.instance.error e.backtrace.take(10).join("\n")

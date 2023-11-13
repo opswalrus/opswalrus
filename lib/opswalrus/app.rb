@@ -320,11 +320,7 @@ module OpsWalrus
           when Invocation::Success
             result.value
           when Invocation::Error
-            {
-              error_type: result.value.class,
-              error: result.value,
-              backtrace: result.value.backtrace.take(10).join("\n")
-            }
+            result.serialize_error
           end
           io.puts JSON.pretty_generate(obj)
           io.string

@@ -40,6 +40,14 @@ module OpsWalrus
       def initialize(value, exit_status = 1)
         super(value, exit_status == 0 ? 1 : exit_status)
       end
+      def serialize_error
+        {
+          type: "Invocation::Error"
+          error_type: value.class.name,
+          error: value,
+          backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
+        }
+      end
       def failure?
         true
       end
