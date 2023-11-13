@@ -578,6 +578,7 @@ module OpsWalrus
       end
     end
 
+    # Returns a SSHKit::Command
     def execute_cmd(*args, input_mapping: nil, ops_prompt_for_sudo_password: false)
       # we only want one of the sudo password interaction handlers:
       # if we're running an ops script on the remote host and we've passed the --pass flag in our invocation of the ops command on the remote host,

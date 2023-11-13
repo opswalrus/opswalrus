@@ -316,10 +316,19 @@ module OpsWalrus
         SemanticLogger.flush
         output = StringIO.open do |io|
           io.puts SCRIPT_RESULT_HEADER
-          io.puts JSON.pretty_generate(result.value)
+          obj = case result
+          when Invocation::Success
+            result.value
+          when Invocation::Error
+            {
+              error_type: result.value.class,
+              error: result.value,
+            }
+          end
+          io.puts JSON.pretty_generate(obj)
           io.string
         end
-        puts "print_script_result - #{Time.now.strftime('%s%L')}"
+        # puts "print_script_result - #{Time.now.strftime('%s%L')}"
         puts output
       end
     end

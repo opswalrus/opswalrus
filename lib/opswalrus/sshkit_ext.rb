@@ -14,11 +14,13 @@ module SSHKit
 
   module Backend
     class Abstract
+      # Returns a SSHKit::Command
       # def execute(*args)
       #   options = { verbosity: :debug, raise_on_non_zero_exit: false }.merge(args.extract_options!)
       #   create_command_and_execute(args, options).success?
       # end
 
+      # Returns a SSHKit::Command
       def execute_cmd(*args)
         options = { verbosity: :info, strip: true, raise_on_non_zero_exit: false }.merge(args.extract_options!)
         create_command_and_execute(args, options)
