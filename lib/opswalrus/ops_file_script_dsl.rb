@@ -42,7 +42,7 @@ module OpsWalrus
       end
       def serialize_error
         {
-          type: "Invocation::Error"
+          type: "Invocation::Error",
           error_type: value.class.name,
           error: value,
           backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
