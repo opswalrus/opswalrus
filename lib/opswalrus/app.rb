@@ -323,6 +323,7 @@ module OpsWalrus
             {
               error_type: result.value.class,
               error: result.value,
+              backtrace: result.value.backtrace.take(10).join("\n")
             }
           end
           io.puts JSON.pretty_generate(obj)
