@@ -228,7 +228,7 @@ module OpsWalrus
       internal_ops_file = OpsFile.new(self, __FILE__.to_pathname.dirname.join(ops_file_name))
       op = OperationRunner.new(self, internal_ops_file)
       result = op.run([], params_json_hash: params)
-      puts "result class=#{result.class}"
+      # puts "result class=#{result.class}"
       exit_status = result.exit_status
       stdout = JSON.pretty_generate(result.value)
       output = if exit_status == 0

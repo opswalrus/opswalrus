@@ -9,7 +9,7 @@ module OpsWalrus
 
     attr_accessor :input_mappings   # Hash[ String | Regex => (String | Proc) ]
 
-    def initialize(mappings, lookback_window_chars = 200)
+    def initialize(mappings, lookback_window_chars = 2000)
       @input_mappings = mappings
       @online_matcher = Kleene::NaiveOnlineRegex.new(mappings.keys, lookback_window_chars)
     end
