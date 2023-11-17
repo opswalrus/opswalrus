@@ -25,6 +25,7 @@ require_relative "version"
 
 module OpsWalrus
   Style = Pastel.new(enabled: $stdout.tty?)
+  DefaultLookbackWindowCharCount = 2000
 
   class App
     def self.instance(*args)

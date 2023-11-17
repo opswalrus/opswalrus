@@ -303,7 +303,7 @@ module OpsWalrus
         if App.instance.dry_run?
           ["", "", 0]
         else
-          sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true, lookback_window_chars: 200) do |interaction_handler|
+          sshkit_cmd = @runtime_env.handle_input(input, inherit_existing_mappings: true, lookback_window_chars: DefaultLookbackWindowCharCount) do |interaction_handler|
             # puts "self=#{self.class.superclass}"
             # self is an instance of one of the dynamically defined subclasses of OpsFileScript
             App.instance.debug("OpsFileScriptDSL#shell! cmd=#{cmd} with input mappings #{interaction_handler.input_mappings.inspect} given input: #{input.inspect})")

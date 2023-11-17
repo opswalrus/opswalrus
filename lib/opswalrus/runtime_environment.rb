@@ -267,7 +267,7 @@ module OpsWalrus
 
     # input_mapping : Hash[ String | Regex => String ]
     # sudo_password : String
-    def handle_input(input_mapping, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true, lookback_window_chars: 200, &block)
+    def handle_input(input_mapping, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true, lookback_window_chars: DefaultLookbackWindowCharCount, &block)
       @interaction_handler.with_mapping(
         input_mapping,
         sudo_password: sudo_password,

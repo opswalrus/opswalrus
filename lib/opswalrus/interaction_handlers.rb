@@ -9,7 +9,7 @@ module OpsWalrus
 
     attr_accessor :input_mappings   # Hash[ String | Regex => (String | Proc) ]
 
-    def initialize(mappings, lookback_window_chars = 2000)
+    def initialize(mappings, lookback_window_chars = DefaultLookbackWindowCharCount)
       @input_mappings = mappings
       @online_matcher = Kleene::NaiveOnlineRegex.new(mappings.keys, lookback_window_chars)
     end
@@ -42,7 +42,7 @@ module OpsWalrus
     # when the given block returns, then the temporary mapping is removed from the interaction handler
     #
     # mapping : Hash[ String | Regex => (String | Proc) ] | Nil
-    def with_mapping(mapping = nil, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true, lookback_window_chars: 200)
+    def with_mapping(mapping = nil, sudo_password: nil, ops_sudo_password: nil, inherit_existing_mappings: true, lookback_window_chars: DefaultLookbackWindowCharCount)
       new_mapping = inherit_existing_mappings ? @input_mappings.clone : {}
 
       if mapping
