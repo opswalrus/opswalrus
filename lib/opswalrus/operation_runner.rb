@@ -87,20 +87,20 @@ module OpsWalrus
         end
       rescue SSHKit::Command::Failed => e
         App.instance.error "Runtime error, command failed: #{e.message}"
-        Invocation::Error.new(e)
+        Invocation::SshError.new(e)
       rescue Error => e
         # puts "OperationRunner#run - #{Time.now.strftime('%s%L')}"
         App.instance.error "Runtime error: Ops script crashed."
         App.instance.error e.message
         App.instance.error e.backtrace.take(10).join("\n")
-        Invocation::Error.new(e)
+        Invocation::RuntimeError.new(e)
       rescue => e
         # puts "OperationRunner#run - #{Time.now.strftime('%s%L')}"
         App.instance.error "Unhandled runtime error: Ops script crashed."
         App.instance.error e.class
         App.instance.error e.message
         App.instance.error e.backtrace.take(10).join("\n")
-        Invocation::Error.new(e)
+        Invocation::UnhandledError.new(e)
       end
 
       result

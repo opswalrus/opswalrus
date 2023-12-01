@@ -43,7 +43,8 @@ module OpsWalrus
       def serialize_error
         {
           type: "Invocation::Error",
-          error_type: value.class.name,
+          error_variant: self.class.name,
+          error_class: value.class.name,
           error: value,
           backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
         }
@@ -51,6 +52,14 @@ module OpsWalrus
       def failure?
         true
       end
+    end
+    class EarlyExitError < Error
+    end
+    class SshError < Error
+    end
+    class RuntimeError < Error
+    end
+    class UnhandledError < Error
     end
   end
 
@@ -178,6 +187,8 @@ module OpsWalrus
             App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
           rescue Errno::EHOSTUNREACH => e
             App.instance.error "[!] The host '#{host}' is unreachable"
+          rescue RemoteInvocationError => e
+            results[host] = e
           # rescue => e
           #   App.instance.error "[!] Command failed:"
           #   App.instance.error e.class
@@ -211,7 +222,7 @@ module OpsWalrus
       result = if exit_status == 0
         Invocation::Success.new(nil)
       else
-        Invocation::Error.new(nil, exit_status)
+        Invocation::EarlyExitError.new(message, exit_status)
       end
       throw :exit_now, result
     end

@@ -216,7 +216,16 @@ module OpsWalrus
       case retval
       when Hash
         if retval["type"] == 'Invocation::Error'
-          raise RemoteInvocationError.new("Remote Invocation Error:\n  #{retval["error_type"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}")
+          # this structure comes from OpsWalrus::Invocation::Error being serialized in App#print_script_result being called from App#run
+          # {
+          #   type: "Invocation::Error",
+          #   error_variant: self.class.name,
+          #   error_class: value.class.name,
+          #   error: value,
+          #   backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
+          # }
+          # raise RemoteInvocationError.new("Remote Invocation Error:\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}")
+          raise RemoteInvocationError.new("Remote Invocation Error:\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}", retval)
         else
           retval.with_indifferent_access.easynav
         end
