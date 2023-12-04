@@ -231,7 +231,10 @@ module OpsWalrus
       result = op.run([], params_json_hash: params)
       # puts "result class=#{result.class}"
       exit_status = result.exit_status
-      stdout = JSON.pretty_generate(result.value)
+      # when we are using the shell method
+      # puts result.value.class   # EasyNavProxy
+      # puts result.value         # Hash looking object
+      stdout = JSON.pretty_generate(result.value.to_h)
       output = if exit_status == 0
         Style.green(stdout)
       else

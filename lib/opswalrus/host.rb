@@ -178,7 +178,7 @@ module OpsWalrus
             # 1. Net::SSH::Disconnect < Net::SSH::Exception with message: "connection closed by remote host"
             # 2. Errno::ECONNRESET < SystemCallError with message: "Connection reset by peer"
             # 3. Errno::ECONNREFUSED < SystemCallError with message: "Connection refused - connect(2) for 192.168.56.10:22"
-          rescue Net::SSH::Disconnect, Errno::ECONNRESET, Errno::ECONNREFUSED => e
+          rescue Net::SSH::Disconnect, Net::SSH::ConnectionTimeout, Errno::ECONNRESET, Errno::ECONNREFUSED => e
             # noop; we expect these while we're trying to reconnect
           rescue => e
             puts "#{e.class} < #{e.class.superclass}"

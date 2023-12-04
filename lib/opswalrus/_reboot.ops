@@ -10,7 +10,7 @@ timeout = params.timeout.integer!(default: 300)
 
 delay = 1 if delay < 1
 
-ssh_noprep in: :sequence do
+host_to_value_map = ssh_noprep in: :sequence do
 # ssh_noprep do
 
   # survey of command options:
@@ -62,3 +62,5 @@ ssh_noprep in: :sequence do
   # }
   reboot(delay: delay, sync: sync, timeout: timeout)
 end
+
+host_to_value_map.transform_keys(&:to_s)

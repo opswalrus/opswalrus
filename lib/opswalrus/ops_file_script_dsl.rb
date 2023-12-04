@@ -118,6 +118,8 @@ module OpsWalrus
             App.instance.error "[!] The host '#{host}' doesn't accept password authentication method."
           rescue Errno::EHOSTUNREACH => e
             App.instance.error "[!] The host '#{host}' is unreachable"
+          rescue RemoteInvocationError => e
+            results[host] = e
           rescue => e
             App.instance.error e.class
             App.instance.error e.message

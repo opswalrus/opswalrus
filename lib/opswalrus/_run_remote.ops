@@ -2,9 +2,11 @@ params:
   ops_file: OpsFile
   operation_kv_args: array string
 ...
-ssh in: :sequence do
+host_to_value_map = ssh in: :sequence do
 # ssh_noprep do
   # puts params.stringify_keys!
   # desc "Running `#{params.ops_file.ops_file_path} #{params.operation_kv_args.join(' ')}` on #{to_s} (alias=#{self.alias})"
   _invoke_remote(params.ops_file, *params.operation_kv_args)
 end
+
+host_to_value_map.transform_keys(&:to_s)
