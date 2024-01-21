@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'opswalrus'
+
+OpsWalrus::Cli2.run(ARGV)

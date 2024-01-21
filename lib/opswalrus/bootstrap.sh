@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
 
-export PATH="$HOME/.local/share/rtx/bin:$PATH"    # this is key for activating rtx without running `eval "$($RTX activate bash)"`
-# eval "$(rtx activate bash)"
-RTX="$HOME/.local/share/rtx/bin/rtx"
-rtx_init() { eval "$($RTX activate bash)"; }
-# RTX_RUBY="$HOME/.local/share/rtx/bin/rtx x ruby -- ruby"
-# RTX_GEM="$HOME/.local/share/rtx/bin/rtx x ruby -- gem"
-RTX_RUBY="$HOME/.local/share/rtx/shims/ruby"
-RTX_GEM="$HOME/.local/share/rtx/shims/gem"
-RUBY_CMD=$RTX_RUBY
-GEM_CMD=$RTX_GEM
+export PATH="$HOME/.local/bin:$PATH"    # this is key for activating mise without running `eval "$($MISE activate bash)"`
+MISE="$HOME/.local/bin/mise"
+# mise_init() { eval "$($MISE activate bash)"; }
+# MISE_RUBY="$HOME/.local/bin/mise x ruby -- ruby"
+# MISE_GEM="$HOME/.local/bin/mise x ruby -- gem"
+MISE_RUBY="$HOME/.local/share/mise/shims/ruby"
+MISE_GEM="$HOME/.local/share/mise/shims/gem"
+RUBY_CMD=$MISE_RUBY
+GEM_CMD=$MISE_GEM
 # RUBY_CMD="ruby"
 # GEM_CMD="gem"
 
-if [ -x $RTX ]; then
-  # rtx_init;
-  # eval "$(rtx activate bash)"
+if [ -x $MISE ]; then
+  # mise_init;
   # if brew is already installed, initialize this shell environment with brew
   # if [ -x "$(command -v /home/linuxbrew/.linuxbrew/bin/brew)" ]; then
   if $RUBY_CMD -e "major, minor, patch = RUBY_VERSION.split('.'); exit 1 unless major.to_i >= 3"; then
@@ -29,7 +27,7 @@ if [ -x $RTX ]; then
       # todo: figure out how to install this differently, so that test versions will work
       # gem install opswalrus
       $GEM_CMD install opswalrus
-      $RTX reshim
+      $MISE reshim
 
       exit 0
     # fi
@@ -81,24 +79,8 @@ fi
 # brew install age    # https://github.com/FiloSottile/age
 
 
-### install ruby
+### install ruby via mise
 
-# 1. via homebrew
-# brew install ruby
-# this doesn't install some gems nicely
-
-# 2. via ruby-install
-# brew install bash grep wget curl md5sha1sum sha2 gnu-tar bzip2 xz patchutils gcc
-# brew install ruby-install
-# ruby-install --update
-# ruby-install ruby 3.2.2
-
-# 3. rvm
-# gpg2 --keyserver keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-# \curl -sSL https://get.rvm.io | bash -s stable --autolibs=homebrew
-# rvm install 3.2.2
-
-# 4. rtx (asdf clone)
 if echo $OS | grep -q 'ubuntu'; then
   # update package list
   sudo apt update -qy
@@ -129,13 +111,12 @@ else
   echo "unsupported OS"
   exit 1
 fi
-curl https://rtx.pub/install.sh | sh
-# eval "$($HOME/.local/share/rtx/bin/rtx activate bash)"
-$RTX use -g ruby@3.2
-$RTX reshim
+curl https://mise.jdx.dev/install.sh | sh
+$MISE use -g ruby@latest
+$MISE reshim
 
 
-# 5. age
+# 5. age encryption
 if echo $OS | grep -q 'ubuntu'; then
   # update package list
   sudo apt update -qy
@@ -161,4 +142,4 @@ fi
 
 # install opswalrus gem
 $GEM_CMD install opswalrus
-$RTX reshim
+$MISE reshim

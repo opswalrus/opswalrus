@@ -215,7 +215,7 @@ module OpsWalrus
       retval = JSON.parse(json_string)
       case retval
       when Hash
-        if retval["type"] == 'Invocation::Error'
+        if retval["type"] == Invocation::Error::Type
           # this structure comes from OpsWalrus::Invocation::Error being serialized in App#print_script_result being called from App#run
           # {
           #   type: "Invocation::Error",
@@ -223,9 +223,15 @@ module OpsWalrus
           #   error_class: value.class.name,
           #   error: value,
           #   backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
+          #   exit_status: exit_status
           # }
           # raise RemoteInvocationError.new("Remote Invocation Error:\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}")
-          raise RemoteInvocationError.new("Remote Invocation Error:\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}", retval)
+
+          if retval["error_variant"] == Invocation::EarlyExitError.name && retval["exit_status"] == ExitCodeHostTemporarilyUnavailable
+            raise RetriableRemoteInvocationError.new("Retriable Remote Invocation Error (exit_status=#{retval["exit_status"]}):\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}", retval)
+          else
+            raise RemoteInvocationError.new("Remote Invocation Error (exit_status=#{retval["exit_status"]}):\n  #{retval["error_class"]}: #{retval["error"]}#{retval["backtrace"] && "\n  Backtrace: #{retval['backtrace']}"}", retval)
+          end
         else
           retval.with_indifferent_access.easynav
         end

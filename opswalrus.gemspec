@@ -41,6 +41,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rubyzip", "~> 2.3"
   spec.add_dependency "semantic_logger", "~> 4.13"
   spec.add_dependency "tty-editor", "~> 0.7"
+  spec.add_dependency "tty-exit", "~> 0.1"
+  spec.add_dependency "tty-option", "~> 0.3"
 
   spec.add_dependency "bcrypt_pbkdf", "~> 1.1"
   spec.add_dependency "ed25519", "~> 1.3"

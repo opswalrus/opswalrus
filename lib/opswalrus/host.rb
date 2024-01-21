@@ -162,39 +162,8 @@ module OpsWalrus
       reboot_success = sh? 'sudo /bin/sh -c "(sleep {{ delay }} && reboot) &"'.mustache
       puts reboot_success
 
-      reconnect_time = nil
-      reconnect_success = if sync
-        desc "Waiting for #{to_s} (alias=#{self.alias}) to finish rebooting"
-        initial_reconnect_delay = delay + 10
-        sleep initial_reconnect_delay
-
-        reconnected = false
-        give_up = false
-        t1 = Time.now
-        until reconnected || give_up
-          begin
-            reconnected = sh?('true')
-            # while trying to reconnect, we expect the following exceptions:
-            # 1. Net::SSH::Disconnect < Net::SSH::Exception with message: "connection closed by remote host"
-            # 2. Errno::ECONNRESET < SystemCallError with message: "Connection reset by peer"
-            # 3. Errno::ECONNREFUSED < SystemCallError with message: "Connection refused - connect(2) for 192.168.56.10:22"
-          rescue Net::SSH::Disconnect, Net::SSH::ConnectionTimeout, Errno::ECONNRESET, Errno::ECONNREFUSED => e
-            # noop; we expect these while we're trying to reconnect
-          rescue => e
-            puts "#{e.class} < #{e.class.superclass}"
-            puts e.message
-            puts e.backtrace.take(5).join("\n")
-          end
-
-          wait_time_elapsed_in_seconds = Time.now - t1
-          give_up = wait_time_elapsed_in_seconds > timeout
-          sleep 5
-        end
-        reconnect_time = initial_reconnect_delay + (Time.now - t1)
-        reconnected
-      else
-        false
-      end
+      reconnect_time = reconnect(delay, timeout) if sync
+      reconnect_success = !!reconnect_time
 
       {
         success: reboot_success && (sync == reconnect_success),
@@ -202,6 +171,45 @@ module OpsWalrus
         reconnected: reconnect_success,
         reboot_duration: reconnect_time
       }
+    end
+
+    def retry_on_disconnect(&block)
+    end
+
+    # returns an integer number of seconds if reconnected; nil otherwise
+    def reconnect(delay: 1, timeout: 300)
+      delay = 1 if delay < 1
+
+      desc "Waiting for #{to_s} (alias=#{self.alias}) to become available. Reconnecting."
+      initial_reconnect_delay = delay + 10
+      sleep initial_reconnect_delay
+
+      reconnected = false
+      give_up = false
+      t1 = Time.now
+      until reconnected || give_up
+        begin
+          reconnected = sh?('true')
+          # while trying to reconnect, we expect the following exceptions:
+          # 1. Net::SSH::Disconnect < Net::SSH::Exception with message: "connection closed by remote host"
+          # 2. Errno::ECONNRESET < SystemCallError with message: "Connection reset by peer"
+          # 3. Errno::ECONNREFUSED < SystemCallError with message: "Connection refused - connect(2) for 192.168.56.10:22"
+        rescue Net::SSH::Disconnect, Net::SSH::ConnectionTimeout, Errno::ECONNRESET, Errno::ECONNREFUSED => e
+          # noop; we expect these while we're trying to reconnect
+        rescue => e
+          puts "#{e.class} < #{e.class.superclass}"
+          puts e.message
+          puts e.backtrace.take(5).join("\n")
+        end
+
+        wait_time_elapsed_in_seconds = Time.now - t1
+        give_up = wait_time_elapsed_in_seconds > timeout
+        sleep 5
+      end
+
+      if reconnected
+        initial_reconnect_delay + (Time.now - t1)
+      end
     end
 
     # runs the given command

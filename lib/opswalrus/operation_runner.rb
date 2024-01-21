@@ -70,6 +70,12 @@ module OpsWalrus
 
     # runtime_kv_args is an Array(String) of the form: ["arg1:val1", "arg1:val2", ...]
     # params_json_hash is a Hash representation of a JSON string
+    # returns:
+    #   Invocation::Success on success
+    #   or Invocation::EarlyExitError when the user's script intentionally exits early without running to completion
+    #   or Invocation::SshError when a connection error condition is raised
+    #   or Invocation::RuntimeError when some known error condition is raised
+    #   or Invocation::UnhandledError when some unknown error condition is raised
     def run(runtime_kv_args, params_json_hash: nil)
       params_hash = build_params_hash(runtime_kv_args, params_json_hash: params_json_hash)
 

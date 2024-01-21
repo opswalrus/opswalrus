@@ -37,16 +37,18 @@ module OpsWalrus
       end
     end
     class Error < Result
+      Type = "Invocation::Error"
       def initialize(value, exit_status = 1)
         super(value, exit_status == 0 ? 1 : exit_status)
       end
       def serialize_error
         {
-          type: "Invocation::Error",
+          type: Type,
           error_variant: self.class.name,
           error_class: value.class.name,
           error: value,
           backtrace: value.is_a?(Exception) ? value.backtrace.take(10).join("\n") : nil,
+          exit_status: exit_status
         }
       end
       def failure?
@@ -54,6 +56,8 @@ module OpsWalrus
       end
     end
     class EarlyExitError < Error
+      # irb(main):062> OpsWalrus::Invocation::EarlyExitError.new(nil, 11).serialize_error
+      # => {:type=>"Invocation::Error", :error_variant=>"OpsWalrus::Invocation::EarlyExitError", :error_class=>"NilClass", :error=>nil, :backtrace=>nil, :exit_status=>11}
     end
     class SshError < Error
     end
@@ -215,6 +219,22 @@ module OpsWalrus
       tags.concat(kwargs["tags"]) if kwargs["tags"]
 
       @runtime_env.app.inventory(tags).hosts
+    end
+
+    # delay: integer?     # default: 1 - 1 second delay before reboot
+    def reboot(delay: 1)
+      delay = 1 if delay < 1
+
+      # desc "Rebooting"
+      rebooting = sh? 'sudo /bin/sh -c "(sleep {{ delay }} && reboot) &"'.mustache
+      # puts reboot_success
+
+      rebooting
+    end
+
+    def reboot_and_exit(delay: 1)
+      # exit status 11 means Resource temporarily unavailable
+      exit(ExitCodeHostTemporarilyUnavailable, "Host temporarily unavailable. Rebooting.") if reboot(delay)
     end
 
     def exit(exit_status, message = nil)

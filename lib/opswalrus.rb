@@ -4,6 +4,7 @@ require 'bundler/setup'
 
 require_relative 'opswalrus/app'
 require_relative 'opswalrus/cli'
+require_relative 'opswalrus/cli2'
 require_relative 'opswalrus/version'
 
 module OpsWalrus
