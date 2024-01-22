@@ -151,7 +151,8 @@ module OpsWalrus
         end
         # todo: make sure this cleanup is present
         if remote_json_kwargs_tempfile_basename
-          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
+          # this may fail if the remote host reboots and we try to subsequently connect and delete the file
+          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename) rescue nil
         end
       end
     end
@@ -293,7 +294,8 @@ module OpsWalrus
         end
         # todo: make sure this cleanup is present
         if remote_json_kwargs_tempfile_basename
-          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename)
+          # this may fail if the remote host reboots and we try to subsequently connect and delete the file
+          @host_proxy.execute(:rm, "-f", remote_json_kwargs_tempfile_basename) rescue nil
         end
       end
     end

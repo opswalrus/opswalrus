@@ -221,9 +221,9 @@ module OpsWalrus
       @runtime_env.app.inventory(tags).hosts
     end
 
-    # delay: integer?     # default: 1 - 1 second delay before reboot
-    def reboot(delay: 1)
-      delay = 1 if delay < 1
+    # delay: integer?     # default: 5 - 5 second delay before reboot
+    def reboot(delay: 5)
+      delay = 5 if delay < 1
 
       # desc "Rebooting"
       rebooting = sh? 'sudo /bin/sh -c "(sleep {{ delay }} && reboot) &"'.mustache
