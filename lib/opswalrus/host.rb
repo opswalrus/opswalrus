@@ -173,12 +173,15 @@ module OpsWalrus
       }
     end
 
-    def autoretry(&block)
+    def autoretry(delay: 5, timeout: 300, &block)
       attempts ||= 0
       attempts += 1
       block.call
     rescue RetriableRemoteInvocationError => e
-      retry if attempts <= 3
+      if attempts <= 3
+        reconnected = reconnect(delay, timeout)
+        retry if reconnected
+      end
     end
 
     # returns an integer number of seconds if reconnected; nil otherwise
