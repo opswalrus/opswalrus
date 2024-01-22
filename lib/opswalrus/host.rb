@@ -8,8 +8,8 @@ require_relative "invocation"
 
 module OpsWalrus
 
-  OPS_GEM="$HOME/.local/share/rtx/shims/gem"
-  OPS_CMD="$HOME/.local/share/rtx/shims/ops"
+  OPS_GEM="$HOME/.local/share/mise/shims/gem"
+  OPS_CMD="$HOME/.local/share/mise/shims/ops"
 
   # the subclasses of HostProxy will define methods that handle method dispatch via HostProxyOpsFileInvocationBuilder objects
   class HostProxy
