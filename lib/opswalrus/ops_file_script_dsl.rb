@@ -229,13 +229,15 @@ module OpsWalrus
       rebooting = sh? 'sudo /bin/sh -c "(sleep {{ delay }} && reboot) &"'.mustache
       # puts reboot_success
 
+      exit(ExitCodeHostTemporarilyUnavailable, "Host temporarily unavailable. Rebooting.") if rebooting
+
       rebooting
     end
 
-    def reboot_and_exit(delay: 1)
-      # exit status 11 means Resource temporarily unavailable
-      exit(ExitCodeHostTemporarilyUnavailable, "Host temporarily unavailable. Rebooting.") if reboot(delay)
-    end
+    # def reboot_and_exit(delay: 1)
+    #   # exit status 11 means Resource temporarily unavailable
+    #   exit(ExitCodeHostTemporarilyUnavailable, "Host temporarily unavailable. Rebooting.") if reboot(delay)
+    # end
 
     def exit(exit_status, message = nil)
       if message

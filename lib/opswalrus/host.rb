@@ -182,7 +182,7 @@ module OpsWalrus
     end
 
     # returns an integer number of seconds if reconnected; nil otherwise
-    def reconnect(delay: 1, timeout: 300)
+    def reconnect(delay = 1, timeout = 300)
       delay = 1 if delay < 1
 
       desc "Waiting for #{to_s} (alias=#{self.alias}) to become available. Reconnecting."
