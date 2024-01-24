@@ -122,7 +122,7 @@ module OpsWalrus
     end
 
     def _zip_copy_and_run_ops_bundle(local_host, block)
-      @_host._initialize_session(local_host)
+      @_host._initialize_session
 
       # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object (i.e. self)
       retval = instance_exec(local_host, &block)    # local_host is passed as the argument to the block
