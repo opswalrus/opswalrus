@@ -209,6 +209,11 @@ module OpsWalrus
       json_hash = JSON.parse(params) rescue nil
       json_hash = json_hash.is_a?(Hash) ? json_hash : nil
 
+      if App.instance.info?
+        info("runtime params:")
+        info(json_hash.inspect)
+      end
+
       @params = json_hash   # @params returns a Hash or nil
     end
 
