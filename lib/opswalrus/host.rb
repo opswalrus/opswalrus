@@ -568,10 +568,10 @@ module OpsWalrus
     def _initialize_session
       # copy over ops bundle zip file
       zip_bundle_path = @runtime_env.zip_bundle_path
-      upload_success = @_host.upload(zip_bundle_path, "tmpops.zip")
+      upload_success = upload(zip_bundle_path, "tmpops.zip")
       raise Error, "Unable to upload ops bundle to remote host" unless upload_success
 
-      stdout, _stderr, exit_status = @_host.run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
+      stdout, _stderr, exit_status = run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
       raise Error, "Unable to unzip ops bundle on remote host: #{stdout}" unless exit_status == 0
       tmp_bundle_root_dir = stdout.strip
       set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
@@ -580,9 +580,9 @@ module OpsWalrus
     def _cleanup_session
       # todo: cleanup
       if @tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
-        @_host.execute(:rm, "-rf", "tmpops.zip", @tmp_bundle_root_dir)
+        execute(:rm, "-rf", "tmpops.zip", @tmp_bundle_root_dir)
       else
-        @_host.execute(:rm, "-rf", "tmpops.zip")
+        execute(:rm, "-rf", "tmpops.zip")
       end
     end
 
