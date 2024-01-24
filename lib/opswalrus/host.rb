@@ -206,7 +206,7 @@ module OpsWalrus
         initial_reconnect_delay + (Time.now - t1)
 
         # initialize session again
-        @_host._initialize_session(local_host)
+        @_host._initialize_session
       end
     end
 
