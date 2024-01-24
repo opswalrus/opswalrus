@@ -122,25 +122,12 @@ module OpsWalrus
     end
 
     def _zip_copy_and_run_ops_bundle(local_host, block)
-      # copy over ops bundle zip file
-      zip_bundle_path = @runtime_env.zip_bundle_path
-      upload_success = @_host.upload(zip_bundle_path, "tmpops.zip")
-      raise Error, "Unable to upload ops bundle to remote host" unless upload_success
+      @_host._initialize_session(local_host)
 
-      stdout, _stderr, exit_status = @_host.run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
-      raise Error, "Unable to unzip ops bundle on remote host: #{stdout}" unless exit_status == 0
-      tmp_bundle_root_dir = stdout.strip
-      @_host.set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
-
-      # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object
+      # we run the block in the context of the host proxy object, s.t. `self` within the block evaluates to the host proxy object (i.e. self)
       retval = instance_exec(local_host, &block)    # local_host is passed as the argument to the block
 
-      # todo: cleanup
-      if tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
-        @_host.execute(:rm, "-rf", "tmpops.zip", tmp_bundle_root_dir)
-      else
-        @_host.execute(:rm, "-rf", "tmpops.zip")
-      end
+      @_host._cleanup_session
 
       retval
     end
@@ -217,6 +204,9 @@ module OpsWalrus
 
       if reconnected
         initial_reconnect_delay + (Time.now - t1)
+
+        # initialize session again
+        @_host._initialize_session(local_host)
       end
     end
 
@@ -572,6 +562,28 @@ module OpsWalrus
 
     def set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
       @tmp_bundle_root_dir = tmp_bundle_root_dir
+    end
+
+    # returns the temporary bundle root directory
+    def _initialize_session
+      # copy over ops bundle zip file
+      zip_bundle_path = @runtime_env.zip_bundle_path
+      upload_success = @_host.upload(zip_bundle_path, "tmpops.zip")
+      raise Error, "Unable to upload ops bundle to remote host" unless upload_success
+
+      stdout, _stderr, exit_status = @_host.run_ops(:bundle, "unzip tmpops.zip", in_bundle_root_dir: false)
+      raise Error, "Unable to unzip ops bundle on remote host: #{stdout}" unless exit_status == 0
+      tmp_bundle_root_dir = stdout.strip
+      set_ssh_session_tmp_bundle_root_dir(tmp_bundle_root_dir)
+    end
+
+    def _cleanup_session
+      # todo: cleanup
+      if @tmp_bundle_root_dir =~ /tmp/   # sanity check the temp path before we blow away something we don't intend
+        @_host.execute(:rm, "-rf", "tmpops.zip", @tmp_bundle_root_dir)
+      else
+        @_host.execute(:rm, "-rf", "tmpops.zip")
+      end
     end
 
     def clear_ssh_session
