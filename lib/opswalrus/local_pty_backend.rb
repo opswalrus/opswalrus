@@ -40,7 +40,8 @@ module SSHKit
               # per https://stackoverflow.com/questions/1154846/continuously-read-from-stdout-of-external-process-in-ruby
               # and https://stackoverflow.com/questions/10238298/ruby-on-linux-pty-goes-away-without-eof-raises-errnoeio
               # the PTY can raise an Errno::EIO because the child process unexpectedly goes away
-              rescue EOFError, Errno::EIO
+              # Errno::ENOENT seems to behave like EIO
+              rescue EOFError, Errno::EIO, Errno::ENOENT
                 # puts "eof!"
                 handle_data_for_stdout(output, cmd, buffer, stdin, true)
                 stdout.close
