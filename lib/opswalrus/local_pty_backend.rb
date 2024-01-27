@@ -44,11 +44,11 @@ module SSHKit
               rescue EOFError, Errno::EIO, Errno::ENOENT
                 # puts "eof!"
                 handle_data_for_stdout(output, cmd, buffer, stdin, true)
-                stdout.close
+                stdout.close unless stdout.closed?
               rescue => e
                 App.instance.error "closing PTY due to unexpected error: #{e.message}"
                 handle_data_for_stdout(output, cmd, buffer, stdin, true)
-                stdout.close
+                stdout.close unless stdout.closed?
                 # puts e.message
                 # puts e.backtrace.join("\n")
               end
