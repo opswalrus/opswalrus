@@ -65,6 +65,7 @@ module SSHKit
           # stderr_writer.close
           # output.log_command_data(cmd, :stderr, stderr_reader.read)
           cmd.exit_status = status.exitstatus
+        ensure
           output.log_command_exit(cmd)
         end
       # ensure
