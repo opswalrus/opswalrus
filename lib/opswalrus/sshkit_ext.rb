@@ -28,16 +28,16 @@ module SSHKit
     end
   end
 
-  module Runner
-    class Sequential < Abstract
-      def run_backend(host, &block)
-        backend(host, &block).run
-      # rescue ::StandardError => e
-      #   e2 = ExecuteError.new e
-      #   raise e2, "Exception while executing #{host.user ? "as #{host.user}@" : "on host "}#{host}: #{e.message}"
-      end
-    end
-  end
+  # module Runner
+  #   class Sequential < Abstract
+  #     def run_backend(host, &block)
+  #       backend(host, &block).run
+  #     # rescue ::StandardError => e
+  #     #   e2 = ExecuteError.new e
+  #     #   raise e2, "Exception while executing #{host.user ? "as #{host.user}@" : "on host "}#{host}: #{e.message}"
+  #     end
+  #   end
+  # end
 
   class Command
     # Initialize a new Command object
