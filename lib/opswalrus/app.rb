@@ -59,7 +59,7 @@ module OpsWalrus
       @pwd = pwd.to_pathname
       @bundler = Bundler.new(self, @pwd)
       @local_hostname = "localhost"
-      @script_mode = false
+      @mode = nil
       @dry_run = false
       @zip_mutex = Thread::Mutex.new
     end
@@ -73,11 +73,19 @@ module OpsWalrus
     end
 
     def script_mode!
-      @script_mode = true
+      @mode = :script
+    end
+
+    def pretty_print_mode!
+      @mode = :pretty
     end
 
     def script_mode?
-      @script_mode
+      @mode == :script
+    end
+
+    def pretty_print_mode?
+      @mode == :pretty
     end
 
     def dry_run?
@@ -321,10 +329,10 @@ module OpsWalrus
     end
 
     def print_script_result(result)
-      if script_mode?
+      if script_mode? || pretty_print_mode?
         SemanticLogger.flush
         output = StringIO.open do |io|
-          io.puts SCRIPT_RESULT_HEADER
+          io.puts(SCRIPT_RESULT_HEADER) if script_mode?
           obj = case result
           when Invocation::Success
             result.value

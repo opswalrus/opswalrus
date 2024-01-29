@@ -35,6 +35,11 @@ class EasyNavProxy
       end
     end
   end
+
+  # Serialize Foo object with its class name and arguments
+  def to_json(*args)
+    @obj.to_json(*args)
+  end
 end
 
 class Hash

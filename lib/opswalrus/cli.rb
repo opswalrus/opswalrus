@@ -225,6 +225,7 @@ module OpsWalrus
       c.switch [:b, :bundle], desc: "Update bundle prior to running the specified operation"
       c.switch :pass, desc: "Prompt for a sudo password"
       c.switch :script, desc: "Script mode"
+      c.switch :pretty, desc: "Pretty print mode"
       c.switch [:r, :remote], desc: "Run the operation on the remote hosts"
 
       c.flag [:u, :user], desc: "Specify the user that the operation will run as"
@@ -262,6 +263,8 @@ module OpsWalrus
 
         if options[:script]
           $app.script_mode!
+        elsif options[:pretty]
+          $app.pretty_print_mode!
         end
 
         exit_status = if options[:remote]
